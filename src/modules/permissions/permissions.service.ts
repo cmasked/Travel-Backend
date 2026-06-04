@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
-import { PermissionResponse } from './interfaces/permission-response.interface';
+import { PermissionResponse } from '../../shared/interfaces/permission-response.interface';
 import { Permission } from './entities/permission.entity';
 import { PermissionRepository } from './repositories/permission.repository';
 

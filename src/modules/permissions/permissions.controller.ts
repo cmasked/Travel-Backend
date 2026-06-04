@@ -2,9 +2,9 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@n
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { RolesGuard } from '../../shared/guards/roles.guard';
+import { PermissionResponse } from '../../shared/interfaces/permission-response.interface';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
-import { PermissionResponse } from './interfaces/permission-response.interface';
 import { PermissionsService } from './permissions.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)

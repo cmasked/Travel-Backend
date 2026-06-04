@@ -4,9 +4,9 @@ import { Permissions } from '../../shared/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../shared/guards/permissions.guard';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
+import { UserResponse } from '../../shared/interfaces/user-response.interface';
 import { AssignRolesDto } from './dto/assign-roles.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UserResponse } from './interfaces/user-response.interface';
 import { UsersService } from './users.service';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)

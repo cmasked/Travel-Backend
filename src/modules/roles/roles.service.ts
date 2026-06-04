@@ -3,7 +3,7 @@ import { PermissionRepository } from '../../modules/permissions/repositories/per
 import { CreateRoleDto } from './dto/create-role.dto';
 import { SetRolePermissionsDto } from './dto/set-role-permissions.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
-import { RoleResponse } from './interfaces/role-response.interface';
+import { RoleResponse } from '../../shared/interfaces/role-response.interface';
 import { Role } from './entities/role.entity';
 import { RoleRepository } from './repositories/role.repository';
 

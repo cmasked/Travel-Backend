@@ -2,7 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UserResponse } from './interfaces/user-response.interface';
+import { UserResponse } from '../../shared/interfaces/user-response.interface';
 import { User } from './entities/user.entity';
 import { UserRepository } from './repositories/user.repository';
 import { RoleRepository } from '../roles/repositories/role.repository';

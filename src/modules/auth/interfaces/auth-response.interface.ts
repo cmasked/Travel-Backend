@@ -1,6 +1,0 @@
-import { UserResponse } from '../../users/interfaces/user-response.interface';
-
-export interface AuthResponse {
-  user: UserResponse;
-  accessToken: string;
-}
