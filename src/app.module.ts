@@ -1,46 +1,37 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { AuthModule } from './modules/auth/auth.module';
-import { Permission } from './modules/permissions/entities/permission.entity';
-import { PermissionsModule } from './modules/permissions/permissions.module';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+
+import { UserModule } from './modules/user.module';
+
+// Shared
+import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
+import { ResponseInterceptor } from './shared/interceptors/response.interceptor';
+import { GlobalExceptionFilter } from './shared/filters/http-exception.filter';
+
+// Entities (for TypeORM)
+import { UserAccount } from './modules/users/entities/user-account.entity';
+import { UserAccountAdditional } from './modules/users/entities/user-account-additional.entity';
+import { Traveler } from './modules/travelers/entities/traveler.entity';
 import { Role } from './modules/roles/entities/role.entity';
-import { RolesModule } from './modules/roles/roles.module';
-import { User } from './modules/users/entities/user.entity';
-import { UsersModule } from './modules/users/users.module';
-import { CacheModule } from './cache.module';
-import { SeederModule } from './seeder/seeder.module';
+import { AdminModule as AdminModuleEntity } from './modules/roles/entities/admin-module.entity';
+import { AdminSubModule } from './modules/roles/entities/admin-sub-module.entity';
+import { Permission } from './modules/permissions/entities/permission.entity';
+import { LoginLog } from './modules/audit/entities/login-log.entity';
+import { ForceLogoutLog } from './modules/audit/entities/force-logout-log.entity';
 
+/**
+ * Root application module — MyGozzo User Service.
+ * FRD §2.1: user-service, port 3001, NestJS + TypeORM + Postgres 16.
+ */
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    CacheModule,
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService): TypeOrmModuleOptions => {
-        const databaseUrl = configService.get<string>('DATABASE_URL');
-
-        return {
-          type: 'postgres',
-          url: databaseUrl,
-          host: databaseUrl ? undefined : configService.get<string>('DATABASE_HOST') ?? 'localhost',
-          port: databaseUrl ? undefined : Number(configService.get<string>('DATABASE_PORT') ?? 5432),
-          username: databaseUrl ? undefined : configService.get<string>('DATABASE_USER') ?? 'postgres',
-          password: databaseUrl ? undefined : configService.get<string>('DATABASE_PASSWORD') ?? 'postgres',
-          database: databaseUrl ? undefined : configService.get<string>('DATABASE_NAME') ?? 'travel_backend',
-          entities: [User, Role, Permission],
-          autoLoadEntities: true,
-          synchronize: true,
-        };
-      },
-    }),
-    AuthModule,
-    UsersModule,
-    RolesModule,
-    PermissionsModule,
-    SeederModule,
+  imports: [UserModule],
+  providers: [
+    // Global JWT guard — all routes protected unless @Public()
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Standard response envelope { success, data, message, code }
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    // Global exception filter
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
   ],
 })
 export class AppModule {}

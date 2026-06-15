@@ -1,13 +1,12 @@
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
+/** Login DTO — FRD §FR-US-013 */
 export class LoginDto {
   @IsEmail()
-  @MaxLength(180)
+  @MaxLength(255)
   email!: string;
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(8)
-  @MaxLength(100)
   password!: string;
 }

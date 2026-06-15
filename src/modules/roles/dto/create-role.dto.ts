@@ -1,13 +1,18 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { RoleType } from '../../../shared/enums';
 
+/** Create role DTO — FRD §FR-US-034 */
 export class CreateRoleDto {
   @IsString()
   @IsNotEmpty()
-  @MaxLength(120)
+  @MaxLength(50)
   name!: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(120)
-  code!: string;
+  @MaxLength(255)
+  description?: string;
+
+  @IsEnum(RoleType)
+  type!: RoleType;
 }

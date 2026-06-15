@@ -1,0 +1,35 @@
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
+import { Observable, map } from 'rxjs';
+
+/**
+ * Standard response envelope per FRD §5:
+ * { success: boolean, data: T, message: string, code: string }
+ */
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message: string;
+  code: string;
+}
+
+@Injectable()
+export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler<T>,
+  ): Observable<ApiResponse<T>> {
+    return next.handle().pipe(
+      map((data) => ({
+        success: true,
+        data,
+        message: 'Success',
+        code: 'OK',
+      })),
+    );
+  }
+}

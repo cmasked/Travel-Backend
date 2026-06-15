@@ -1,117 +1,244 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  NotFoundException,
+  UnprocessableEntityException,
+  HttpException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UserResponse } from '../../shared/interfaces/user-response.interface';
-import { User } from './entities/user.entity';
-import { UserRepository } from './repositories/user.repository';
-import { RoleRepository } from '../roles/repositories/role.repository';
+import * as crypto from 'crypto';
+import { UserAccount } from './entities/user-account.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { ErrorCodes } from '../../shared/constants/error-codes';
+import { UserStatus } from '../../shared/enums';
+import { RedisService } from '../redis/redis.service';
+import { UsersRepository } from './users.repository';
+
+const BCRYPT_ROUNDS = 12;
+
+/**
+ * Valid status transitions per FRD §6.1 Account State Machine.
+ */
+const VALID_TRANSITIONS: Record<string, UserStatus[]> = {
+  [UserStatus.PENDING_APPROVAL]: [UserStatus.ACTIVE, UserStatus.INACTIVE],
+  [UserStatus.ACTIVE]: [UserStatus.SUSPENDED, UserStatus.INACTIVE],
+  [UserStatus.SUSPENDED]: [UserStatus.ACTIVE],
+  [UserStatus.INACTIVE]: [UserStatus.ACTIVE],
+};
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly roleRepository: RoleRepository,
+    private readonly usersRepository: UsersRepository,
+    private readonly redisService: RedisService,
   ) {}
 
-  async create(createUserDto: CreateUserDto, roleCodes: string[] = ['user']): Promise<UserResponse> {
-    const normalizedEmail = createUserDto.email.toLowerCase();
-    const existingUser = await this.userRepository.findByEmail(normalizedEmail);
-
-    if (existingUser) {
-      throw new ConflictException('Email already in use');
+  /**
+   * FR-US-021 — GET /users/me. Never return password hash.
+   */
+  async getProfile(userId: string): Promise<Partial<UserAccount>> {
+    try {
+      const user = await this.usersRepository.findById(userId);
+      if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
+      return this.sanitizeUser(user);
+    } catch (error) {
+      this.handleError(error, 'getProfile');
     }
-
-    const passwordHash = await bcrypt.hash(createUserDto.password, 12);
-    const roles = await this.roleRepository.findByCodes(roleCodes);
-    const user = this.userRepository.create({
-      name: createUserDto.name,
-      email: normalizedEmail,
-      passwordHash,
-      roles,
-    });
-
-    const savedUser = await this.userRepository.save(user);
-    return this.toResponse(savedUser);
   }
 
-  async findAll(): Promise<UserResponse[]> {
-    const users = await this.userRepository.findAll();
-    return users.map((user) => this.toResponse(user));
-  }
+  /**
+   * FR-US-022 — PATCH /users/me. Partial update, immutable fields blocked.
+   */
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<Partial<UserAccount>> {
+    try {
+      const user = await this.usersRepository.findById(userId);
+      if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
 
-  async findById(id: string): Promise<UserResponse> {
-    const user = await this.userRepository.findById(id);
+      if (dto.firstName !== undefined) user.firstName = dto.firstName;
+      if (dto.lastName !== undefined) user.lastName = dto.lastName;
+      if (dto.gender !== undefined) user.gender = dto.gender;
+      if (dto.title !== undefined) user.title = dto.title;
+      if (dto.dob !== undefined) user.dob = new Date(dto.dob);
+      if (dto.mobileNo !== undefined) user.mobileNo = dto.mobileNo;
+      if (dto.dialCode !== undefined) user.dialCode = dto.dialCode;
+      if (dto.dialCountry !== undefined) user.dialCountry = dto.dialCountry;
+      if (dto.nationality !== undefined) user.nationality = dto.nationality;
+      if (dto.preferredLanguage !== undefined) user.preferredLanguage = dto.preferredLanguage;
+      if (dto.preferredCurrency !== undefined) user.preferredCurrency = dto.preferredCurrency;
+      if (dto.state !== undefined) user.state = dto.state;
+      if (dto.country !== undefined) user.country = dto.country;
+      if (dto.address1 !== undefined) user.address1 = dto.address1;
+      if (dto.postalCode !== undefined) user.postalCode = dto.postalCode;
+      if (dto.city !== undefined) user.city = dto.city;
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+      user.updatedBy = userId;
+      const saved = await this.usersRepository.save(user);
+      return this.sanitizeUser(saved);
+    } catch (error) {
+      this.handleError(error, 'updateProfile');
     }
-
-    return this.toResponse(user);
   }
 
-  async findByEmailWithPassword(email: string): Promise<User | null> {
-    return this.userRepository.findByEmailWithPassword(email.toLowerCase());
-  }
-
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<UserResponse> {
-    const user = await this.userRepository.findById(id);
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (updateUserDto.email && updateUserDto.email.toLowerCase() !== user.email) {
-      const existingUser = await this.userRepository.findByEmail(updateUserDto.email.toLowerCase());
-
-      if (existingUser && existingUser.id !== id) {
-        throw new ConflictException('Email already in use');
+  /**
+   * FR-US-025 — Change password. Verify current → hash new → invalidate all sessions.
+   */
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<{ message: string }> {
+    try {
+      const user = await this.usersRepository.findById(userId);
+      if (!user || !user.password) {
+        throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
       }
-    }
 
-    if (updateUserDto.name !== undefined) {
-      user.name = updateUserDto.name;
-    }
+      const currentValid = await bcrypt.compare(dto.currentPassword, user.password);
+      if (!currentValid) {
+        throw new ForbiddenException({ message: 'Current password is incorrect', code: ErrorCodes.CURRENT_PASSWORD_WRONG });
+      }
 
-    if (updateUserDto.email !== undefined) {
-      user.email = updateUserDto.email.toLowerCase();
-    }
+      const sameAsOld = await bcrypt.compare(dto.newPassword, user.password);
+      if (sameAsOld) {
+        throw new UnprocessableEntityException({ message: 'New password must differ from current', code: ErrorCodes.PASSWORD_SAME_AS_OLD });
+      }
 
-    if (updateUserDto.password !== undefined) {
-      user.passwordHash = await bcrypt.hash(updateUserDto.password, 12);
-    }
+      const lp = dto.newPassword.toLowerCase();
+      if (lp.includes(user.email.split('@')[0]) || lp.includes(user.firstName.toLowerCase()) || lp.includes(user.lastName.toLowerCase())) {
+        throw new UnprocessableEntityException({ message: 'Password must not contain your email or name', code: ErrorCodes.PASSWORD_CONTAINS_PII });
+      }
 
-    const savedUser = await this.userRepository.save(user);
-    return this.toResponse(savedUser);
+      user.password = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+      await this.usersRepository.save(user);
+      await this.usersRepository.updateLoginSessionsExpired(userId);
+
+      await this.redisService.publish('user.password_changed', {
+        user_id: userId,
+        correlation_id: crypto.randomUUID(),
+      });
+
+      return { message: 'Password changed. All sessions invalidated.' };
+    } catch (error) {
+      this.handleError(error, 'changePassword');
+    }
   }
 
-  async remove(id: string): Promise<void> {
-    const user = await this.userRepository.findById(id);
+  // ─── Admin endpoints ─────────────────────────────────────────
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+  /** GET /users — Admin list, paginated, filterable */
+  async findAll(query: {
+    page?: number;
+    limit?: number;
+    userType?: string;
+    status?: string;
+  }): Promise<{ users: Partial<UserAccount>[]; total: number; page: number; limit: number }> {
+    try {
+      const page = query.page ?? 1;
+      const limit = Math.min(query.limit ?? 20, 50);
+      const where: Record<string, unknown> = { isDeleted: false };
+      if (query.userType) where['userType'] = query.userType;
+      if (query.status) where['status'] = query.status;
+
+      const [users, total] = await this.usersRepository.findAll(where, page, limit);
+      return { users: users.map((u) => this.sanitizeUser(u)), total, page, limit };
+    } catch (error) {
+      this.handleError(error, 'findAll');
+    }
+  }
+
+  /** GET /users/:id — Admin view */
+  async findById(userId: string): Promise<Partial<UserAccount>> {
+    try {
+      const user = await this.usersRepository.findById(userId);
+      if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
+      return this.sanitizeUser(user);
+    } catch (error) {
+      this.handleError(error, 'findById');
+    }
+  }
+
+  /**
+   * PATCH /users/:id/status — Admin status change per FRD §6.1 state machine.
+   */
+  async updateStatus(userId: string, dto: UpdateUserStatusDto, adminId: string): Promise<Partial<UserAccount>> {
+    try {
+      const user = await this.usersRepository.findById(userId);
+      if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
+
+      const allowed = VALID_TRANSITIONS[user.status];
+      if (!allowed || !allowed.includes(dto.status)) {
+        throw new UnprocessableEntityException({
+          message: `Cannot transition from ${user.status} to ${dto.status}`,
+          code: ErrorCodes.INVALID_STATUS_TRANSITION,
+        });
+      }
+
+      const oldStatus = user.status;
+
+      if (dto.status === UserStatus.SUSPENDED && !dto.rejectionReason) {
+        throw new UnprocessableEntityException({
+          message: 'rejection_reason is required when suspending an account',
+          code: ErrorCodes.VALIDATION_ERROR,
+        });
+      }
+
+      user.status = dto.status;
+      user.actionDate = new Date();
+      user.updatedBy = adminId;
+
+      if (dto.status === UserStatus.SUSPENDED) {
+        user.rejectionReason = dto.rejectionReason ?? null;
+        await this.usersRepository.updateLoginSessionsExpired(userId);
+      }
+
+      if (dto.status === UserStatus.ACTIVE && oldStatus === UserStatus.SUSPENDED) {
+        user.rejectionReason = null;
+      }
+
+      const saved = await this.usersRepository.save(user);
+
+      await this.redisService.publish('user.account_status_changed', {
+        user_id: userId,
+        new_status: dto.status,
+        old_status: oldStatus,
+        correlation_id: crypto.randomUUID(),
+      });
+
+      return this.sanitizeUser(saved);
+    } catch (error) {
+      this.handleError(error, 'updateStatus');
+    }
+  }
+
+  /** POST /users/:id/role — Assign role (FR-US-038) */
+  async assignRole(userId: string, roleId: string, adminId: string): Promise<Partial<UserAccount>> {
+    try {
+      const user = await this.usersRepository.findById(userId);
+      if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
+
+      user.roleId = roleId;
+      user.updatedBy = adminId;
+      const saved = await this.usersRepository.save(user);
+      return this.sanitizeUser(saved);
+    } catch (error) {
+      this.handleError(error, 'assignRole');
+    }
+  }
+
+  /** Strip password and sensitive fields from response */
+  private sanitizeUser(user: UserAccount): Partial<UserAccount> {
+    const { password, isDeleted, ...safe } = user;
+    return safe;
+  }
+
+  private handleError(error: unknown, method: string): never {
+    if (error instanceof HttpException) {
+      throw error;
     }
 
-    await this.userRepository.remove(user);
-  }
-
-  async assignRoles(id: string, roleIds: string[]): Promise<UserResponse> {
-    const user = await this.userRepository.setRoles(id, roleIds);
-    return this.toResponse(user);
-  }
-
-  toResponse(user: User): UserResponse {
-    const roles = user.roles ?? [];
-    const permissions = [...new Set(roles.flatMap((role) => role.permissions?.map((permission) => permission.code) ?? []))];
-
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      roles: roles.map((role) => role.code),
-      permissions,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+    this.logger.error(`UsersService.${method} failed`, error instanceof Error ? error.stack : undefined);
+    throw new InternalServerErrorException('Unexpected user service error');
   }
 }

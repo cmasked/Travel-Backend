@@ -1,40 +1,52 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { Roles } from '../../shared/decorators/roles.decorator';
-import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
-import { RolesGuard } from '../../shared/guards/roles.guard';
-import { PermissionResponse } from '../../shared/interfaces/permission-response.interface';
-import { CreatePermissionDto } from './dto/create-permission.dto';
-import { UpdatePermissionDto } from './dto/update-permission.dto';
+import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
+import { UpsertPermissionsDto } from './dto/upsert-permissions.dto';
+import { AdminGuard } from '../../shared/guards/admin.guard';
+import { Public } from '../../shared/decorators/public.decorator';
+import { CurrentUser } from '../../shared/decorators/current-user.decorator';
+import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
-@Controller('permissions')
+/**
+ * Permissions endpoints — FRD §5.4.
+ */
+@Controller()
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
-  @Get()
-  findAll(): Promise<PermissionResponse[]> {
-    return this.permissionsService.findAll();
+  /** GET /roles/:id/permissions — Permission matrix for a role (FR-US-035) */
+  @UseGuards(AdminGuard)
+  @Get('roles/:id/permissions')
+  findByRole(@Param('id') roleId: string) {
+    return this.permissionsService.findByRole(roleId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string): Promise<PermissionResponse> {
-    return this.permissionsService.findById(id);
+  /** PUT /roles/:id/permissions — Upsert full permission set (FR-US-036) */
+  @UseGuards(AdminGuard)
+  @Put('roles/:id/permissions')
+  upsertForRole(
+    @Param('id') roleId: string,
+    @Body() dto: UpsertPermissionsDto,
+    @CurrentUser() admin: JwtPayload,
+  ) {
+    return this.permissionsService.upsertForRole(roleId, dto, admin.sub);
   }
 
-  @Post()
-  create(@Body() createPermissionDto: CreatePermissionDto): Promise<PermissionResponse> {
-    return this.permissionsService.create(createPermissionDto);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePermissionDto: UpdatePermissionDto): Promise<PermissionResponse> {
-    return this.permissionsService.update(id, updatePermissionDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string): Promise<void> {
-    return this.permissionsService.remove(id);
+  /**
+   * GET /permissions/check — Internal permission check (FR-US-037).
+   * Called by API Gateway. Must be < 15ms p95. Redis-cached.
+   */
+  @Public()
+  @Get('permissions/check')
+  async checkPermission(
+    @Query('role_id') roleId: string,
+    @Query('module_id') moduleId: string,
+    @Query('action') action: string,
+  ) {
+    const allowed = await this.permissionsService.checkPermission(
+      roleId,
+      parseInt(moduleId, 10),
+      action as 'create' | 'read' | 'update' | 'delete',
+    );
+    return { allowed };
   }
 }
