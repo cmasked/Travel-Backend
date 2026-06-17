@@ -15,11 +15,15 @@ export class AuditController {
   /** POST /users/:id/force-logout — Admin force logout (FR-US-042) */
   @UseGuards(AdminGuard)
   @Post(':id/force-logout')
-  forceLogout(
+  async forceLogout(
     @Param('id') userId: string,
     @Body() dto: ForceLogoutDto,
     @CurrentUser() admin: JwtPayload,
   ) {
-    return this.auditService.forceLogout(userId, dto.all ?? false, admin.sub);
+    try {
+      return await this.auditService.forceLogout(userId, dto.all ?? false, admin.sub);
+    } catch (error) {
+      throw error;
+    }
   }
 }

@@ -20,20 +20,32 @@ export class UsersController {
 
   /** GET /users/me — Retrieve own profile (FR-US-021) */
   @Get('me')
-  getProfile(@CurrentUser() user: JwtPayload) {
-    return this.usersService.getProfile(user.sub);
+  async getProfile(@CurrentUser() user: JwtPayload) {
+    try {
+      return await this.usersService.getProfile(user.sub);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** PATCH /users/me — Update own profile (FR-US-022) */
   @Patch('me')
-  updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
-    return this.usersService.updateProfile(user.sub, dto);
+  async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
+    try {
+      return await this.usersService.updateProfile(user.sub, dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /users/me/change-password — (FR-US-025) */
   @Post('me/change-password')
-  changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto) {
-    return this.usersService.changePassword(user.sub, dto);
+  async changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto) {
+    try {
+      return await this.usersService.changePassword(user.sub, dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   // ─── Admin endpoints ─────────────────────────────────────────
@@ -41,46 +53,62 @@ export class UsersController {
   /** GET /users — List users, paginated (Admin) */
   @UseGuards(AdminGuard)
   @Get()
-  findAll(
+  async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('userType') userType?: string,
     @Query('status') status?: string,
   ) {
-    return this.usersService.findAll({
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      userType,
-      status,
-    });
+    try {
+      return await this.usersService.findAll({
+        page: page ? parseInt(page, 10) : undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        userType,
+        status,
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** GET /users/:id — Admin view (FR-US-044: no PII in logs) */
   @UseGuards(AdminGuard)
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.usersService.findById(id);
+  async findById(@Param('id') id: string) {
+    try {
+      return await this.usersService.findById(id);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** PATCH /users/:id/status — Update user status (Admin) */
   @UseGuards(AdminGuard)
   @Patch(':id/status')
-  updateStatus(
+  async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateUserStatusDto,
     @CurrentUser() admin: JwtPayload,
   ) {
-    return this.usersService.updateStatus(id, dto, admin.sub);
+    try {
+      return await this.usersService.updateStatus(id, dto, admin.sub);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /users/:id/role — Assign role to user (FR-US-038) */
   @UseGuards(AdminGuard)
   @Post(':id/role')
-  assignRole(
+  async assignRole(
     @Param('id') id: string,
     @Body() dto: AssignRoleDto,
     @CurrentUser() admin: JwtPayload,
   ) {
-    return this.usersService.assignRole(id, dto.roleId, admin.sub);
+    try {
+      return await this.usersService.assignRole(id, dto.roleId, admin.sub);
+    } catch (error) {
+      throw error;
+    }
   }
 }

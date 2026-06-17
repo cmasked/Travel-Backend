@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Ip, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -10,6 +10,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from '../../shared/decorators/public.decorator';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
+import { ClientHeaders, ClientHeadersData } from '../../shared/decorators/client-headers.decorator';
 
 /**
  * Authentication endpoints — FRD §5.1.
@@ -22,66 +23,101 @@ export class AuthController {
   /** POST /auth/register — Public, 10/min per IP (FR-US-001) */
   @Public()
   @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  async register(@Body() dto: RegisterDto) {
+    try {
+      return await this.authService.register(dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /auth/login — Public, 10/min per IP (FR-US-013) */
   @Public()
   @Post('login')
-  login(
+  async login(
     @Body() dto: LoginDto,
-    @Ip() ip: string,
-    @Headers('user-agent') userAgent: string,
+    @ClientHeaders() headers: ClientHeadersData,
   ) {
-    return this.authService.login(dto, ip, userAgent);
+    try {
+      return await this.authService.login(dto, headers.ip, headers.device);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /auth/logout — JWT Required (FR-US-017) */
   @Post('logout')
-  logout(@CurrentUser() user: JwtPayload) {
-    return this.authService.logout(user.sessionId, user.sub);
+  async logout(@CurrentUser() user: JwtPayload) {
+    try {
+      return await this.authService.logout(user.sessionId, user.sub);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /auth/refresh — Refresh Token (FR-US-016) */
   @Public()
   @Post('refresh')
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.authService.refresh(dto);
+  async refresh(@Body() dto: RefreshTokenDto) {
+    try {
+      return await this.authService.refresh(dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /auth/verify-email — Public (FR-US-009) */
   @Public()
   @Post('verify-email')
-  verifyEmail(@Body() dto: VerifyOtpDto) {
-    return this.authService.verifyEmail(dto);
+  async verifyEmail(@Body() dto: VerifyOtpDto) {
+    try {
+      return await this.authService.verifyEmail(dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /auth/resend-otp — Public, 5/min (FR-US-011) */
   @Public()
   @Post('resend-otp')
-  resendOtp(@Body() dto: ResendOtpDto) {
-    return this.authService.resendOtp(dto);
+  async resendOtp(@Body() dto: ResendOtpDto) {
+    try {
+      return await this.authService.resendOtp(dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /auth/forgot-password — Public, 5/min per IP (FR-US-026) */
   @Public()
   @Post('forgot-password')
-  forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto);
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    try {
+      return await this.authService.forgotPassword(dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /auth/reset-password — OTP Token (FR-US-026) */
   @Public()
   @Post('reset-password')
-  resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto);
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    try {
+      return await this.authService.resetPassword(dto);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** GET /auth/validate — Internal, no limit (FR-US-019). Must be < 20ms p95. */
   @Public()
   @Get('validate')
-  validate(@Query('sessionId') sessionId: string) {
-    return this.authService.validate(sessionId);
+  async validate(@Query('sessionId') sessionId: string) {
+    try {
+      return await this.authService.validate(sessionId);
+    } catch (error) {
+      throw error;
+    }
   }
 }

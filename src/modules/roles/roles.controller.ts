@@ -15,19 +15,31 @@ export class RolesController {
 
   /** GET /roles — List all roles, filterable by type (FR-US-033) */
   @Get()
-  findAll(@Query('type') type?: string) {
-    return this.rolesService.findAll(type);
+  async findAll(@Query('type') type?: string) {
+    try {
+      return await this.rolesService.findAll(type);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** POST /roles — Create a new role (FR-US-034) */
   @Post()
-  create(@Body() dto: CreateRoleDto, @CurrentUser() admin: JwtPayload) {
-    return this.rolesService.create(dto, admin.sub);
+  async create(@Body() dto: CreateRoleDto, @CurrentUser() admin: JwtPayload) {
+    try {
+      return await this.rolesService.create(dto, admin.sub);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** GET /roles/:id — Get role detail */
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.rolesService.findById(id);
+  async findById(@Param('id') id: string) {
+    try {
+      return await this.rolesService.findById(id);
+    } catch (error) {
+      throw error;
+    }
   }
 }

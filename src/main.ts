@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { MandatoryHeadersGuard } from './shared/guards/mandatory-headers.guard';
 
 /**
  * MyGozzo User Service — FRD §2.1.
@@ -21,6 +22,8 @@ async function bootstrap(): Promise<void> {
       forbidNonWhitelisted: true,
     }),
   );
+
+  app.useGlobalGuards(new MandatoryHeadersGuard());
 
   app.enableCors();
 
