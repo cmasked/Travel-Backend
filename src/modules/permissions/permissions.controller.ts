@@ -16,19 +16,27 @@ export class PermissionsController {
   /** GET /roles/:id/permissions — Permission matrix for a role (FR-US-035) */
   @UseGuards(AdminGuard)
   @Get('roles/:id/permissions')
-  findByRole(@Param('id') roleId: string) {
-    return this.permissionsService.findByRole(roleId);
+  async findByRole(@Param('id') roleId: string) {
+    try {
+      return await this.permissionsService.findByRole(roleId);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /** PUT /roles/:id/permissions — Upsert full permission set (FR-US-036) */
   @UseGuards(AdminGuard)
   @Put('roles/:id/permissions')
-  upsertForRole(
+  async upsertForRole(
     @Param('id') roleId: string,
     @Body() dto: UpsertPermissionsDto,
     @CurrentUser() admin: JwtPayload,
   ) {
-    return this.permissionsService.upsertForRole(roleId, dto, admin.sub);
+    try {
+      return await this.permissionsService.upsertForRole(roleId, dto, admin.sub);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -42,11 +50,15 @@ export class PermissionsController {
     @Query('module_id') moduleId: string,
     @Query('action') action: string,
   ) {
-    const allowed = await this.permissionsService.checkPermission(
-      roleId,
-      parseInt(moduleId, 10),
-      action as 'create' | 'read' | 'update' | 'delete',
-    );
-    return { allowed };
+    try {
+      const allowed = await this.permissionsService.checkPermission(
+        roleId,
+        parseInt(moduleId, 10),
+        action as 'create' | 'read' | 'update' | 'delete',
+      );
+      return { allowed };
+    } catch (error) {
+      throw error;
+    }
   }
 }
