@@ -8,3 +8,5 @@ export { AccessTokenType } from './access-token-type.enum';
 export { DocumentType } from './document-type.enum';
 export { RoleType } from './role-type.enum';
 export { ModuleType } from './module-type.enum';
+export { MarkupModule } from './markup-module.enum';
+export { MarkupType } from './markup-type.enum';
