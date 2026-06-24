@@ -4,6 +4,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { AssignRoleDto } from './dto/assign-role.dto';
+import { CreateSubAdminDto } from './dto/create-subadmin.dto';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { AdminGuard } from '../../shared/guards/admin.guard';
@@ -14,7 +15,7 @@ import { AdminGuard } from '../../shared/guards/admin.guard';
  */
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // ─── Self-service (JWT required) ─────────────────────────────
 
@@ -50,7 +51,7 @@ export class UsersController {
 
   // ─── Admin endpoints ─────────────────────────────────────────
 
-  /** GET /users — List users, paginated (Admin) */
+  /** GET /users — List users, paginated, filterable by date and role (Admin) */
   @UseGuards(AdminGuard)
   @Get()
   async findAll(
@@ -58,6 +59,9 @@ export class UsersController {
     @Query('limit') limit?: string,
     @Query('userType') userType?: string,
     @Query('status') status?: string,
+    @Query('roleId') roleId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
   ) {
     try {
       return await this.usersService.findAll({
@@ -65,6 +69,9 @@ export class UsersController {
         limit: limit ? parseInt(limit, 10) : undefined,
         userType,
         status,
+        roleId,
+        fromDate,
+        toDate,
       });
     } catch (error) {
       throw error;
@@ -107,6 +114,23 @@ export class UsersController {
   ) {
     try {
       return await this.usersService.assignRole(id, dto.roleId, admin.sub);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * POST /users/sub-admin — Create a new sub-admin user
+   * Only existing Admins with a valid JWT token can call this.
+   */
+  @UseGuards(AdminGuard)
+  @Post('sub-admin')
+  async createSubAdmin(
+    @Body() dto: CreateSubAdminDto,
+    @CurrentUser() admin: JwtPayload,
+  ) {
+    try {
+      return await this.usersService.createSubAdmin(dto, admin.sub);
     } catch (error) {
       throw error;
     }

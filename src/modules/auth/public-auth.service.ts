@@ -2,9 +2,6 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
-  HttpException,
-  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
@@ -12,15 +9,10 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { UserAccount } from '../users/entities/user-account.entity';
-import { Traveler } from '../travelers/entities/traveler.entity';
-import { LoginLog } from '../audit/entities/login-log.entity';
-import { UserAccountAdditional } from '../users/entities/user-account-additional.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
@@ -31,21 +23,27 @@ import { generateOtp, hashOtp, verifyOtp, isOtpExpired, OTP_MAX_VERIFY_ATTEMPTS,
 import { maskEmail } from '../../shared/utils/pii-masker.util';
 import { AuthRepository } from './auth.repository';
 import { EncryptionService } from '../../shared/services/encryption.service';
+import { BaseAuthService } from './base-auth.service';
 
 const BCRYPT_ROUNDS = 12;
 const FAILED_LOGIN_MAX = 10;
 const FAILED_LOGIN_TTL_SECONDS = 15 * 60;
 
+/**
+ * Public (customer-facing) authentication service.
+ * Handles: register, login, OTP verification, password reset.
+ * Inherits logout, refresh, validate from BaseAuthService.
+ */
 @Injectable()
-export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
+export class PublicAuthService extends BaseAuthService {
   constructor(
-    private readonly authRepository: AuthRepository,
-    private readonly jwtService: JwtService,
-    private readonly redisService: RedisService,
-    private readonly encryptionService: EncryptionService,
-  ) {}
+    authRepository: AuthRepository,
+    jwtService: JwtService,
+    redisService: RedisService,
+    encryptionService: EncryptionService,
+  ) {
+    super(authRepository, jwtService, redisService, encryptionService);
+  }
 
   /**
    * FR-US-001, 002, 003, 005, 006 — Register with email/password.
@@ -129,13 +127,17 @@ export class AuthService {
       const user = await this.authRepository.findUserByEmail(email);
       if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
 
+      if (user.isEmailVerified) {
+        return { message: 'Email already verified' };
+      }
+
       const loginLog = await this.authRepository.findLatestLoginLog(user.userId);
       if (!loginLog || !loginLog.otp || !loginLog.otpTime) {
         throw new UnprocessableEntityException({ message: 'No OTP found. Request a new one.', code: ErrorCodes.OTP_EXPIRED });
       }
 
       if (loginLog.otpVerifyAttempts >= OTP_MAX_VERIFY_ATTEMPTS) {
-        throw new UnprocessableEntityException({ message: 'OTP invalidated after too many attempts. Request a new one.', code: ErrorCodes.OTP_MAX_ATTEMPTS });
+        throw new UnprocessableEntityException({ message: 'OTP invalidated after too many attempts', code: ErrorCodes.OTP_MAX_ATTEMPTS });
       }
 
       if (isOtpExpired(loginLog.otpTime)) {
@@ -169,7 +171,7 @@ export class AuthService {
   }
 
   /**
-   * FR-US-011 — Resend OTP with rate limiting.
+   * FR-US-011 — Resend OTP.
    */
   async resendOtp(dto: ResendOtpDto): Promise<{ message: string }> {
     try {
@@ -177,19 +179,24 @@ export class AuthService {
       const user = await this.authRepository.findUserByEmail(email);
       if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
 
+      if (user.isEmailVerified) {
+        return { message: 'Email already verified' };
+      }
+
       const loginLog = await this.authRepository.findLatestLoginLog(user.userId);
 
-      if (loginLog && loginLog.otpTime) {
-        const windowMs = OTP_RESEND_WINDOW_MINUTES * 60 * 1000;
-        const inWindow = Date.now() - loginLog.otpTime.getTime() < windowMs;
-
-        if (inWindow && loginLog.otpAttempts >= OTP_MAX_RESEND_ATTEMPTS) {
-          user.status = UserStatus.INACTIVE;
-          await this.authRepository.saveUser(user);
-          throw new UnprocessableEntityException({
-            message: `Account temporarily locked for ${ACCOUNT_LOCK_DURATION_MINUTES} minutes due to excessive OTP requests`,
-            code: ErrorCodes.OTP_RESEND_LIMIT,
-          });
+      if (loginLog) {
+        if (loginLog.otpAttempts >= OTP_MAX_RESEND_ATTEMPTS) {
+          const lastOtpTime = loginLog.otpTime;
+          if (lastOtpTime) {
+            const minutesSinceLastOtp = (Date.now() - lastOtpTime.getTime()) / 60000;
+            if (minutesSinceLastOtp < OTP_RESEND_WINDOW_MINUTES) {
+              throw new ForbiddenException({
+                message: `Account temporarily locked for ${ACCOUNT_LOCK_DURATION_MINUTES} minutes due to excessive OTP requests`,
+                code: ErrorCodes.OTP_RESEND_LIMIT,
+              });
+            }
+          }
         }
       }
 
@@ -324,93 +331,6 @@ export class AuthService {
   }
 
   /**
-   * FR-US-017 — Logout.
-   */
-  async logout(sessionId: string, userId: string): Promise<{ message: string }> {
-    try {
-      const loginLog = await this.authRepository.findSessionByIdAndUser(sessionId, userId);
-      if (loginLog) {
-        loginLog.isTokenExpired = true;
-        await this.authRepository.saveLoginLog(loginLog);
-      }
-
-      await this.redisService.publish('user.logout', {
-        user_id: userId,
-        login_log_id: sessionId,
-        correlation_id: crypto.randomUUID(),
-      });
-
-      return { message: 'Logged out successfully' };
-    } catch (error) {
-      this.handleError(error, 'logout');
-    }
-  }
-
-  /**
-   * FR-US-016 — Token refresh with rotation.
-   */
-  async refresh(dto: RefreshTokenDto): Promise<{ accessToken: string; refreshToken: string }> {
-    try {
-      const logs = await this.authRepository.findActiveRefreshLogs();
-      let matchedLog: LoginLog | null = null;
-
-      for (const log of logs) {
-        if (log.refreshToken) {
-          try {
-            const stored = this.encryptionService.decrypt(log.refreshToken);
-            if (stored === dto.refreshToken) {
-              matchedLog = log;
-              break;
-            }
-          } catch {
-            continue;
-          }
-        }
-      }
-
-      if (!matchedLog) {
-        throw new UnauthorizedException({ message: 'Invalid refresh token', code: ErrorCodes.INVALID_REFRESH_TOKEN });
-      }
-
-      const user = await this.authRepository.findUserById(matchedLog.userId);
-      if (!user || user.status !== UserStatus.ACTIVE) {
-        throw new ForbiddenException({ message: 'Account not active', code: ErrorCodes.ACCOUNT_INACTIVE });
-      }
-
-      const newRefreshToken = crypto.randomBytes(64).toString('hex');
-      const payload: JwtPayload = {
-        sub: user.userId,
-        type: user.userType,
-        roleId: user.roleId,
-        sessionId: matchedLog.loginLogId,
-      };
-      const newAccessToken = this.jwtService.sign(payload);
-
-      matchedLog.accessToken = this.encryptionService.encrypt(newAccessToken);
-      matchedLog.refreshToken = this.encryptionService.encrypt(newRefreshToken);
-      matchedLog.accessTokenType = AccessTokenType.REFRESH;
-      matchedLog.lastTokenRefreshedAt = new Date();
-      await this.authRepository.saveLoginLog(matchedLog);
-
-      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
-    } catch (error) {
-      this.handleError(error, 'refresh');
-    }
-  }
-
-  /**
-   * FR-US-019 — Validate session. Must complete < 20ms p95.
-   */
-  async validate(sessionId: string): Promise<{ valid: boolean }> {
-    try {
-      const log = await this.authRepository.findSessionValidationRow(sessionId);
-      return { valid: !!log && !log.isTokenExpired };
-    } catch (error) {
-      this.handleError(error, 'validate');
-    }
-  }
-
-  /**
    * FR-US-026 — Forgot password: generate reset OTP.
    */
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
@@ -500,14 +420,5 @@ export class AuthService {
     } catch (error) {
       this.handleError(error, 'resetPassword');
     }
-  }
-
-  private handleError(error: unknown, method: string): never {
-    if (error instanceof HttpException) {
-      throw error;
-    }
-
-    this.logger.error(`AuthService.${method} failed`, error instanceof Error ? error.stack : undefined);
-    throw new InternalServerErrorException('Unexpected auth service error');
   }
 }

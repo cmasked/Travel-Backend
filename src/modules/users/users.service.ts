@@ -6,6 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
   HttpException,
+  ConflictException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -13,8 +14,9 @@ import { UserAccount } from './entities/user-account.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { CreateSubAdminDto } from './dto/create-subadmin.dto';
 import { ErrorCodes } from '../../shared/constants/error-codes';
-import { UserStatus } from '../../shared/enums';
+import { UserStatus, UserType, AuthProvider, TravelerTitle } from '../../shared/enums';
 import { RedisService } from '../redis/redis.service';
 import { UsersRepository } from './users.repository';
 
@@ -37,7 +39,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly redisService: RedisService,
-  ) {}
+  ) { }
 
   /**
    * FR-US-021 — GET /users/me. Never return password hash.
@@ -127,12 +129,15 @@ export class UsersService {
 
   // ─── Admin endpoints ─────────────────────────────────────────
 
-  /** GET /users — Admin list, paginated, filterable */
+  /** GET /users — Admin list, paginated, filterable by date and role */
   async findAll(query: {
     page?: number;
     limit?: number;
     userType?: string;
     status?: string;
+    roleId?: string;
+    fromDate?: string;
+    toDate?: string;
   }): Promise<{ users: Partial<UserAccount>[]; total: number; page: number; limit: number }> {
     try {
       const page = query.page ?? 1;
@@ -140,8 +145,15 @@ export class UsersService {
       const where: Record<string, unknown> = { isDeleted: false };
       if (query.userType) where['userType'] = query.userType;
       if (query.status) where['status'] = query.status;
+      if (query.roleId) where['roleId'] = query.roleId;
 
-      const [users, total] = await this.usersRepository.findAll(where, page, limit);
+      const [users, total] = await this.usersRepository.findAll(
+        where,
+        page,
+        limit,
+        query.fromDate,
+        query.toDate,
+      );
       return { users: users.map((u) => this.sanitizeUser(u)), total, page, limit };
     } catch (error) {
       this.handleError(error, 'findAll');
@@ -227,6 +239,68 @@ export class UsersService {
     }
   }
 
+  async createSubAdmin(dto: CreateSubAdminDto, creatorAdminId: string): Promise<Partial<UserAccount>> {
+    try {
+
+      const email = dto.email.toLowerCase();
+      const existing = await this.usersRepository.findByEmail(email);
+      if (existing) {
+        throw new ConflictException({ message: 'Email already exists', code: ErrorCodes.EMAIL_ALREADY_EXISTS });
+      }
+
+      const role = await this.usersRepository.findRoleById(dto.roleId);
+      if (!role) {
+        throw new NotFoundException({ message: 'Role not found', code: ErrorCodes.USER_NOT_FOUND });
+      }
+
+
+
+      const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+
+      // Step 4: Create and save the UserAccount
+      const savedUser = await this.usersRepository.save(
+        this.usersRepository.createUser({
+          email,
+          password: passwordHash,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          userType: UserType.USER,           // Sub-admins use 'user' type but have a role_id
+          status: UserStatus.ACTIVE,          // Immediately active (admin trusts them)
+          authProvider: AuthProvider.LOCAL,    // They log in with email + password
+          isEmailVerified: true,              // Skip OTP since admin created them
+          roleId: role.id,
+          createdBy: creatorAdminId,
+          updatedBy: creatorAdminId,
+        })
+      );
+
+      // Step 5: Create linked Traveler profile
+      await this.usersRepository.saveTraveler(
+        this.usersRepository.createTraveler({
+          userId: savedUser.userId,
+          title: TravelerTitle.MR,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          dob: new Date('2000-01-01'),
+          primaryTraveler: true,
+        })
+      );
+
+      // Step 6: Create linked UserAccountAdditional profile
+      await this.usersRepository.saveAdditional(
+        this.usersRepository.createAdditional({
+          userId: savedUser.userId,
+          featureFlags: {},
+        })
+      );
+
+      // Step 7: Return the user but strip the password hash
+      return this.sanitizeUser(savedUser);
+    } catch (error) {
+      this.handleError(error, 'createSubAdmin');
+    }
+  }
+
   /** Strip password and sensitive fields from response */
   private sanitizeUser(user: UserAccount): Partial<UserAccount> {
     const { password, isDeleted, ...safe } = user;
@@ -242,3 +316,5 @@ export class UsersService {
     throw new InternalServerErrorException('Unexpected user service error');
   }
 }
+
+
