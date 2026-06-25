@@ -257,7 +257,7 @@ export class UsersService {
 
       const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
-      // Step 4: Create and save the UserAccount
+      // Step 1: Create and save the UserAccount
       const savedUser = await this.usersRepository.save(
         this.usersRepository.createUser({
           email,
@@ -274,7 +274,7 @@ export class UsersService {
         })
       );
 
-      // Step 5: Create linked Traveler profile
+      // Step 2: Create linked Traveler profile
       await this.usersRepository.saveTraveler(
         this.usersRepository.createTraveler({
           userId: savedUser.userId,
@@ -286,7 +286,7 @@ export class UsersService {
         })
       );
 
-      // Step 6: Create linked UserAccountAdditional profile
+      // Step 3: Create linked UserAccountAdditional profile
       await this.usersRepository.saveAdditional(
         this.usersRepository.createAdditional({
           userId: savedUser.userId,
@@ -294,7 +294,7 @@ export class UsersService {
         })
       );
 
-      // Step 7: Return the user but strip the password hash
+      // Step 4: Return the user but strip the password hash
       return this.sanitizeUser(savedUser);
     } catch (error) {
       this.handleError(error, 'createSubAdmin');
