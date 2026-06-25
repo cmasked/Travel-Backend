@@ -11,6 +11,8 @@ import { CreateBannerDto } from './dto/create-banner.dto';
 import { UpdateBannerDto } from './dto/update-banner.dto';
 import { ErrorCodes } from '../../shared/constants/error-codes';
 import { BannersRepository } from './banners.repository';
+import { MessageResponse } from '../../shared/interfaces';
+import { BannerListResponse } from './interfaces/banner-response.interface';
 
 @Injectable()
 export class BannersService {
@@ -34,6 +36,8 @@ export class BannersService {
         bannerCode: dto.bannerCode,
         description: dto.description ?? null,
         images: dto.images ?? [],
+        linkUrl: dto.linkUrl ?? null,
+        sortOrder: dto.sortOrder ?? 0,
         bannerModule: dto.bannerModule,
         createdBy: adminId,
       });
@@ -45,7 +49,7 @@ export class BannersService {
   }
 
   /** Admin list all banners (paginated) */
-  async findAll(query: { page?: number; limit?: number; bannerModule?: string }): Promise<{ banners: Banner[]; total: number; page: number; limit: number }> {
+  async findAll(query: { page?: number; limit?: number; bannerModule?: string }): Promise<BannerListResponse> {
     try {
       const page = query.page ?? 1;
       const limit = Math.min(query.limit ?? 20, 50);
@@ -56,7 +60,13 @@ export class BannersService {
       }
 
       const [banners, total] = await this.bannersRepository.findAll(where, page, limit);
-      return { banners, total, page, limit };
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: banners,
+        meta: { total, page, limit, totalPages },
+      };
     } catch (error) {
       this.handleError(error, 'findAll');
     }
@@ -106,6 +116,8 @@ export class BannersService {
       if (dto.bannerCode !== undefined) banner.bannerCode = dto.bannerCode;
       if (dto.description !== undefined) banner.description = dto.description ?? null;
       if (dto.images !== undefined) banner.images = dto.images ?? [];
+      if (dto.linkUrl !== undefined) banner.linkUrl = dto.linkUrl ?? null;
+      if (dto.sortOrder !== undefined) banner.sortOrder = dto.sortOrder;
       if (dto.bannerModule !== undefined) banner.bannerModule = dto.bannerModule;
       if (dto.isActive !== undefined) banner.isActive = dto.isActive;
 
@@ -118,7 +130,7 @@ export class BannersService {
   }
 
   /** Soft-delete a banner */
-  async remove(bannerId: string): Promise<{ message: string }> {
+  async remove(bannerId: string): Promise<MessageResponse> {
     try {
       const banner = await this.findById(bannerId);
       await this.bannersRepository.remove(banner);

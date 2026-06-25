@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import { ErrorCodes } from '../../shared/constants/error-codes';
 import { RedisService } from '../redis/redis.service';
 import { AuditRepository } from './audit.repository';
+import { MessageResponse } from '../../shared/interfaces';
 
 @Injectable()
 export class AuditService {
@@ -18,7 +19,7 @@ export class AuditService {
    * If all = true: set is_token_expired = true on ALL login_logs for user.
    * Always creates an immutable force_logout_logs row.
    */
-  async forceLogout(userId: string, all: boolean, adminId: string): Promise<{ message: string }> {
+  async forceLogout(userId: string, all: boolean, adminId: string): Promise<MessageResponse> {
     try {
       const user = await this.auditRepository.findUserById(userId);
       if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });

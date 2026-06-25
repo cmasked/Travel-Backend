@@ -15,6 +15,7 @@ import { UserStatus, AccessTokenType } from '../../shared/enums';
 import { RedisService } from '../redis/redis.service';
 import { AuthRepository } from './auth.repository';
 import { EncryptionService } from '../../shared/services/encryption.service';
+import { MessageResponse, TokenRefreshResponse, SessionValidationResponse } from '../../shared/interfaces';
 
 /**
  * Base authentication service containing shared logic
@@ -36,7 +37,7 @@ export class BaseAuthService {
   /**
    * FR-US-017 — Logout.
    */
-  async logout(sessionId: string, userId: string): Promise<{ message: string }> {
+  async logout(sessionId: string, userId: string): Promise<MessageResponse> {
     try {
       const loginLog = await this.authRepository.findSessionByIdAndUser(sessionId, userId);
       if (loginLog) {
@@ -59,7 +60,7 @@ export class BaseAuthService {
   /**
    * FR-US-016 — Token refresh with rotation.
    */
-  async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async refresh(refreshToken: string): Promise<TokenRefreshResponse> {
     try {
       const logs = await this.authRepository.findActiveRefreshLogs();
       let matchedLog: LoginLog | null = null;
@@ -111,7 +112,7 @@ export class BaseAuthService {
   /**
    * FR-US-019 — Validate session. Must complete < 20ms p95.
    */
-  async validate(sessionId: string): Promise<{ valid: boolean }> {
+  async validate(sessionId: string): Promise<SessionValidationResponse> {
     try {
       const log = await this.authRepository.findSessionValidationRow(sessionId);
       return { valid: !!log && !log.isTokenExpired };

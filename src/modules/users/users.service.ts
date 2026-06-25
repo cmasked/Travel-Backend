@@ -19,6 +19,8 @@ import { ErrorCodes } from '../../shared/constants/error-codes';
 import { UserStatus, UserType, AuthProvider, TravelerTitle } from '../../shared/enums';
 import { RedisService } from '../redis/redis.service';
 import { UsersRepository } from './users.repository';
+import { MessageResponse } from '../../shared/interfaces';
+import { UserListQuery, UserListResponse } from './interfaces/user-response.interface';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -90,7 +92,7 @@ export class UsersService {
   /**
    * FR-US-025 — Change password. Verify current → hash new → invalidate all sessions.
    */
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<{ message: string }> {
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<MessageResponse> {
     try {
       const user = await this.usersRepository.findById(userId);
       if (!user || !user.password) {
@@ -130,15 +132,7 @@ export class UsersService {
   // ─── Admin endpoints ─────────────────────────────────────────
 
   /** GET /users — Admin list, paginated, filterable by date and role */
-  async findAll(query: {
-    page?: number;
-    limit?: number;
-    userType?: string;
-    status?: string;
-    roleId?: string;
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<{ users: Partial<UserAccount>[]; total: number; page: number; limit: number }> {
+  async findAll(query: UserListQuery): Promise<UserListResponse> {
     try {
       const page = query.page ?? 1;
       const limit = Math.min(query.limit ?? 20, 50);
@@ -154,7 +148,13 @@ export class UsersService {
         query.fromDate,
         query.toDate,
       );
-      return { users: users.map((u) => this.sanitizeUser(u)), total, page, limit };
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: users.map((u) => this.sanitizeUser(u)),
+        meta: { total, page, limit, totalPages },
+      };
     } catch (error) {
       this.handleError(error, 'findAll');
     }
