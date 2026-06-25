@@ -11,6 +11,7 @@ import { CreateTravelerDto } from './dto/create-traveler.dto';
 import { UpdateTravelerDto } from './dto/update-traveler.dto';
 import { ErrorCodes } from '../../shared/constants/error-codes';
 import { TravelersRepository } from './travelers.repository';
+import { MessageResponse } from '../../shared/interfaces';
 import { EncryptionService } from '../../shared/services/encryption.service';
 
 const MAX_TRAVELERS = 10;
@@ -132,7 +133,7 @@ export class TravelersService {
   /**
    * FR-US-031 — Soft delete. Primary traveler protected.
    */
-  async remove(userId: string, travelerId: string): Promise<{ message: string }> {
+  async remove(userId: string, travelerId: string): Promise<MessageResponse> {
     try {
       const traveler = await this.travelersRepository.findOneById(userId, travelerId);
 

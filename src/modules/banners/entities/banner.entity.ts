@@ -18,6 +18,12 @@ export class Banner {
   @Column({ name: 'images', type: 'text', array: true, default: [] })
   images!: string[];
 
+  @Column({ name: 'link_url', type: 'varchar', length: 2048, nullable: true })
+  linkUrl!: string | null;
+
+  @Column({ name: 'sort_order', type: 'int', default: 0 })
+  sortOrder!: number;
+
   @Column({ name: 'banner_module', type: 'varchar', length: 50 })
   bannerModule!: BannerModule;
 

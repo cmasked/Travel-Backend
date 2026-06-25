@@ -14,6 +14,7 @@ import { RedisService } from '../redis/redis.service';
 import { AuthRepository } from './auth.repository';
 import { EncryptionService } from '../../shared/services/encryption.service';
 import { BaseAuthService } from './base-auth.service';
+import { AuthResponse } from '../../shared/interfaces';
 
 const FAILED_LOGIN_MAX = 10;
 const FAILED_LOGIN_TTL_SECONDS = 15 * 60;
@@ -40,11 +41,7 @@ export class AdminAuthService extends BaseAuthService {
    * 2. Skips OTP verification (admins are pre-verified).
    * 3. Returns roleId in the response for dashboard use.
    */
-  async login(dto: LoginDto, ip?: string, userAgent?: string): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: Record<string, unknown>;
-  }> {
+  async login(dto: LoginDto, ip?: string, userAgent?: string): Promise<AuthResponse> {
     try {
       const email = dto.email.toLowerCase();
       const failKey = `failed_admin_logins:${email}`;

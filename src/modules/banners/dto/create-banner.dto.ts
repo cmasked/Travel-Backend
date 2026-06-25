@@ -21,6 +21,13 @@ export class CreateBannerDto {
   @IsOptional()
   images?: string[];
 
+  @IsString()
+  @IsOptional()
+  linkUrl?: string;
+
+  @IsOptional()
+  sortOrder?: number;
+
   @IsEnum(BannerModule, { message: 'Invalid banner module' })
   @IsNotEmpty()
   bannerModule!: BannerModule;

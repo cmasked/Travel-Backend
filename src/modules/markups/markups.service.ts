@@ -11,6 +11,7 @@ import { CreateMarkupDto } from './dto/create-markup.dto';
 import { UpdateMarkupDto } from './dto/update-markup.dto';
 import { ErrorCodes } from '../../shared/constants/error-codes';
 import { MarkupsRepository } from './markups.repository';
+import { MessageResponse } from '../../shared/interfaces';
 
 @Injectable()
 export class MarkupsService {
@@ -97,7 +98,7 @@ export class MarkupsService {
   }
 
   /** Delete a markup */
-  async remove(markupId: string): Promise<{ message: string }> {
+  async remove(markupId: string): Promise<MessageResponse> {
     try {
       const markup = await this.findById(markupId);
       await this.markupsRepository.remove(markup);

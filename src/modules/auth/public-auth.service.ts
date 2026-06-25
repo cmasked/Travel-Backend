@@ -24,6 +24,7 @@ import { maskEmail } from '../../shared/utils/pii-masker.util';
 import { AuthRepository } from './auth.repository';
 import { EncryptionService } from '../../shared/services/encryption.service';
 import { BaseAuthService } from './base-auth.service';
+import { AuthResponse, RegisterResponse, MessageResponse } from '../../shared/interfaces';
 
 const BCRYPT_ROUNDS = 12;
 const FAILED_LOGIN_MAX = 10;
@@ -48,7 +49,7 @@ export class PublicAuthService extends BaseAuthService {
   /**
    * FR-US-001, 002, 003, 005, 006 — Register with email/password.
    */
-  async register(dto: RegisterDto): Promise<{ userId: string; message: string }> {
+  async register(dto: RegisterDto): Promise<RegisterResponse> {
     try {
       const email = dto.email.toLowerCase();
       const existing = await this.authRepository.findUserByEmail(email);
@@ -121,7 +122,7 @@ export class PublicAuthService extends BaseAuthService {
   /**
    * FR-US-009, 010 — Verify email OTP.
    */
-  async verifyEmail(dto: VerifyOtpDto): Promise<{ message: string }> {
+  async verifyEmail(dto: VerifyOtpDto): Promise<MessageResponse> {
     try {
       const email = dto.email.toLowerCase();
       const user = await this.authRepository.findUserByEmail(email);
@@ -173,7 +174,7 @@ export class PublicAuthService extends BaseAuthService {
   /**
    * FR-US-011 — Resend OTP.
    */
-  async resendOtp(dto: ResendOtpDto): Promise<{ message: string }> {
+  async resendOtp(dto: ResendOtpDto): Promise<MessageResponse> {
     try {
       const email = dto.email.toLowerCase();
       const user = await this.authRepository.findUserByEmail(email);
@@ -238,11 +239,7 @@ export class PublicAuthService extends BaseAuthService {
   /**
    * FR-US-013, 014, 015, 040 — Login with email/password.
    */
-  async login(dto: LoginDto, ip?: string, userAgent?: string): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: Record<string, unknown>;
-  }> {
+  async login(dto: LoginDto, ip?: string, userAgent?: string): Promise<AuthResponse> {
     try {
       const email = dto.email.toLowerCase();
       const failKey = `failed_logins:${email}`;
@@ -333,7 +330,7 @@ export class PublicAuthService extends BaseAuthService {
   /**
    * FR-US-026 — Forgot password: generate reset OTP.
    */
-  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(dto: ForgotPasswordDto): Promise<MessageResponse> {
     try {
       const email = dto.email.toLowerCase();
       const user = await this.authRepository.findUserByEmail(email);
@@ -368,7 +365,7 @@ export class PublicAuthService extends BaseAuthService {
   /**
    * FR-US-026 — Reset password with OTP.
    */
-  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(dto: ResetPasswordDto): Promise<MessageResponse> {
     try {
       const email = dto.email.toLowerCase();
       const user = await this.authRepository.findUserByEmail(email);

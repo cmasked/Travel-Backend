@@ -21,7 +21,7 @@ export class BannersRepository {
   findAll(where: Record<string, unknown>, page: number, limit: number): Promise<[Banner[], number]> {
     return this.bannerRepo.findAndCount({
       where,
-      order: { createdAt: 'DESC' },
+      order: { sortOrder: 'ASC', createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -30,7 +30,7 @@ export class BannersRepository {
   findActivePublic(bannerModule?: string): Promise<Banner[]> {
     const where: Record<string, unknown> = { isActive: true, isDeleted: false };
     if (bannerModule) where['bannerModule'] = bannerModule;
-    return this.bannerRepo.find({ where, order: { createdAt: 'DESC' } });
+    return this.bannerRepo.find({ where, order: { sortOrder: 'ASC', createdAt: 'DESC' } });
   }
 
   findById(bannerId: string): Promise<Banner | null> {
