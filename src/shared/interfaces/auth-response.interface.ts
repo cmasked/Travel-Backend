@@ -1,11 +1,20 @@
+export interface AuthUserSnapshot {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  userType: string;
+  isEmailVerified?: boolean;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
-  user: Record<string, unknown>;
+  user: AuthUserSnapshot;
 }
 
 export interface AdminAuthResponse extends AuthResponse {
-  roleId: string | null;
+  user: AuthUserSnapshot & { roleId: string | null };
 }
 
 export interface TokenRefreshResponse {

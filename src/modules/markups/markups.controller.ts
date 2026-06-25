@@ -5,6 +5,8 @@ import { UpdateMarkupDto } from './dto/update-markup.dto';
 import { AdminGuard } from '../../shared/guards/admin.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
+import { Markup } from './entities/markup.entity';
+import { MessageResponse } from '../../shared/interfaces';
 
 /**
  * Markup endpoints — Admin only.
@@ -20,7 +22,7 @@ export class MarkupsController {
   async create(
     @Body() dto: CreateMarkupDto,
     @CurrentUser() admin: JwtPayload,
-  ) {
+  ): Promise<Markup> {
     try {
       return await this.markupsService.create(dto, admin.sub);
     } catch (error) {
@@ -30,7 +32,7 @@ export class MarkupsController {
 
   /** GET /markups — List all markups */
   @Get()
-  async findAll() {
+  async findAll(): Promise<Markup[]> {
     try {
       return await this.markupsService.findAll();
     } catch (error) {
@@ -40,7 +42,7 @@ export class MarkupsController {
 
   /** GET /markups/:id — Get a single markup by ID */
   @Get(':id')
-  async findById(@Param('id') id: string) {
+  async findById(@Param('id') id: string): Promise<Markup> {
     try {
       return await this.markupsService.findById(id);
     } catch (error) {
@@ -54,7 +56,7 @@ export class MarkupsController {
     @Param('id') id: string,
     @Body() dto: UpdateMarkupDto,
     @CurrentUser() admin: JwtPayload,
-  ) {
+  ): Promise<Markup> {
     try {
       return await this.markupsService.update(id, dto, admin.sub);
     } catch (error) {
@@ -64,7 +66,7 @@ export class MarkupsController {
 
   /** DELETE /markups/:id — Delete a markup */
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string): Promise<MessageResponse> {
     try {
       return await this.markupsService.remove(id);
     } catch (error) {
