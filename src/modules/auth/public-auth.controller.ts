@@ -11,6 +11,7 @@ import { Public } from '../../shared/decorators/public.decorator';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { ClientHeaders, ClientHeadersData } from '../../shared/decorators/client-headers.decorator';
+import { RegisterResponse, AuthResponse, MessageResponse, TokenRefreshResponse, SessionValidationResponse } from '../../shared/interfaces';
 
 /**
  * Public (customer-facing) authentication endpoints.
@@ -23,7 +24,7 @@ export class PublicAuthController {
   /** POST /auth/register — Public, 10/min per IP (FR-US-001) */
   @Public()
   @Post('register')
-  async register(@Body() dto: RegisterDto) {
+  async register(@Body() dto: RegisterDto): Promise<RegisterResponse> {
     try {
       return await this.publicAuthService.register(dto);
     } catch (error) {
@@ -37,7 +38,7 @@ export class PublicAuthController {
   async login(
     @Body() dto: LoginDto,
     @ClientHeaders() headers: ClientHeadersData,
-  ) {
+  ): Promise<AuthResponse> {
     try {
       return await this.publicAuthService.login(dto, headers.ip, headers.device);
     } catch (error) {
@@ -47,7 +48,7 @@ export class PublicAuthController {
 
   /** POST /auth/logout — JWT Required (FR-US-017) */
   @Post('logout')
-  async logout(@CurrentUser() user: JwtPayload) {
+  async logout(@CurrentUser() user: JwtPayload): Promise<MessageResponse> {
     try {
       return await this.publicAuthService.logout(user.sessionId, user.sub);
     } catch (error) {
@@ -58,7 +59,7 @@ export class PublicAuthController {
   /** POST /auth/refresh — Refresh Token (FR-US-016) */
   @Public()
   @Post('refresh')
-  async refresh(@Body() dto: RefreshTokenDto) {
+  async refresh(@Body() dto: RefreshTokenDto): Promise<TokenRefreshResponse> {
     try {
       return await this.publicAuthService.refresh(dto.refreshToken);
     } catch (error) {
@@ -69,7 +70,7 @@ export class PublicAuthController {
   /** POST /auth/verify-email — Public (FR-US-009) */
   @Public()
   @Post('verify-email')
-  async verifyEmail(@Body() dto: VerifyOtpDto) {
+  async verifyEmail(@Body() dto: VerifyOtpDto): Promise<MessageResponse> {
     try {
       return await this.publicAuthService.verifyEmail(dto);
     } catch (error) {
@@ -80,7 +81,7 @@ export class PublicAuthController {
   /** POST /auth/resend-otp — Public, 5/min (FR-US-011) */
   @Public()
   @Post('resend-otp')
-  async resendOtp(@Body() dto: ResendOtpDto) {
+  async resendOtp(@Body() dto: ResendOtpDto): Promise<MessageResponse> {
     try {
       return await this.publicAuthService.resendOtp(dto);
     } catch (error) {
@@ -91,7 +92,7 @@ export class PublicAuthController {
   /** POST /auth/forgot-password — Public, 5/min per IP (FR-US-026) */
   @Public()
   @Post('forgot-password')
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<MessageResponse> {
     try {
       return await this.publicAuthService.forgotPassword(dto);
     } catch (error) {
@@ -102,7 +103,7 @@ export class PublicAuthController {
   /** POST /auth/reset-password — OTP Token (FR-US-026) */
   @Public()
   @Post('reset-password')
-  async resetPassword(@Body() dto: ResetPasswordDto) {
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<MessageResponse> {
     try {
       return await this.publicAuthService.resetPassword(dto);
     } catch (error) {
@@ -113,7 +114,7 @@ export class PublicAuthController {
   /** GET /auth/validate — Internal, no limit (FR-US-019). Must be < 20ms p95. */
   @Public()
   @Get('validate')
-  async validate(@Query('sessionId') sessionId: string) {
+  async validate(@Query('sessionId') sessionId: string): Promise<SessionValidationResponse> {
     try {
       return await this.publicAuthService.validate(sessionId);
     } catch (error) {

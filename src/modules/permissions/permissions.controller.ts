@@ -5,6 +5,8 @@ import { AdminGuard } from '../../shared/guards/admin.guard';
 import { Public } from '../../shared/decorators/public.decorator';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
+import { Permission } from './entities/permission.entity';
+import { MessageResponse } from '../../shared/interfaces';
 
 /**
  * Permissions endpoints — FRD §5.4.
@@ -16,7 +18,7 @@ export class PermissionsController {
   /** GET /roles/:id/permissions — Permission matrix for a role (FR-US-035) */
   @UseGuards(AdminGuard)
   @Get('roles/:id/permissions')
-  async findByRole(@Param('id') roleId: string) {
+  async findByRole(@Param('id') roleId: string): Promise<Permission[]> {
     try {
       return await this.permissionsService.findByRole(roleId);
     } catch (error) {
@@ -31,7 +33,7 @@ export class PermissionsController {
     @Param('id') roleId: string,
     @Body() dto: UpsertPermissionsDto,
     @CurrentUser() admin: JwtPayload,
-  ) {
+  ): Promise<Permission[]> {
     try {
       return await this.permissionsService.upsertForRole(roleId, dto, admin.sub);
     } catch (error) {
@@ -49,7 +51,7 @@ export class PermissionsController {
     @Query('role_id') roleId: string,
     @Query('module_id') moduleId: string,
     @Query('action') action: string,
-  ) {
+  ): Promise<{ allowed: boolean }> {
     try {
       const allowed = await this.permissionsService.checkPermission(
         roleId,

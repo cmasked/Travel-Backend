@@ -6,6 +6,9 @@ import { AdminGuard } from '../../shared/guards/admin.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { Public } from '../../shared/decorators/public.decorator';
+import { Banner } from './entities/banner.entity';
+import { BannerListResponse } from './interfaces/banner-response.interface';
+import { MessageResponse } from '../../shared/interfaces';
 
 @Controller('banners')
 export class BannersController {
@@ -14,7 +17,7 @@ export class BannersController {
   /** POST /banners — Create a new banner (Admin) */
   @UseGuards(AdminGuard)
   @Post()
-  async create(@Body() createBannerDto: CreateBannerDto, @CurrentUser() admin: JwtPayload) {
+  async create(@Body() createBannerDto: CreateBannerDto, @CurrentUser() admin: JwtPayload): Promise<Partial<Banner>> {
     try {
       return await this.bannersService.create(createBannerDto, admin.sub);
     } catch (error) {
@@ -25,7 +28,7 @@ export class BannersController {
   /** GET /banners/public — Get all active banners (Public Frontend) */
   @Public()
   @Get('public')
-  async findActivePublic(@Query('bannerModule') bannerModule?: string) {
+  async findActivePublic(@Query('bannerModule') bannerModule?: string): Promise<Banner[]> {
     try {
       return await this.bannersService.findActivePublic(bannerModule);
     } catch (error) {
@@ -40,7 +43,7 @@ export class BannersController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('bannerModule') bannerModule?: string,
-  ) {
+  ): Promise<BannerListResponse> {
     try {
       return await this.bannersService.findAll({
         page: page ? parseInt(page, 10) : undefined,
@@ -55,7 +58,7 @@ export class BannersController {
   /** GET /banners/:id — Get a single banner (Admin) */
   @UseGuards(AdminGuard)
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string): Promise<Partial<Banner>> {
     try {
       return await this.bannersService.findById(id);
     } catch (error) {
@@ -70,7 +73,7 @@ export class BannersController {
     @Param('id') id: string,
     @Body() updateBannerDto: UpdateBannerDto,
     @CurrentUser() admin: JwtPayload,
-  ) {
+  ): Promise<Partial<Banner>> {
     try {
       return await this.bannersService.update(id, updateBannerDto, admin.sub);
     } catch (error) {
@@ -81,7 +84,7 @@ export class BannersController {
   /** DELETE /banners/:id — Soft delete a banner (Admin) */
   @UseGuards(AdminGuard)
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string): Promise<MessageResponse> {
     try {
       return await this.bannersService.remove(id);
     } catch (error) {

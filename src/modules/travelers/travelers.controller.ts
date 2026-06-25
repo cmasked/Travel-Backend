@@ -4,6 +4,8 @@ import { CreateTravelerDto } from './dto/create-traveler.dto';
 import { UpdateTravelerDto } from './dto/update-traveler.dto';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
+import { Traveler } from './entities/traveler.entity';
+import { MessageResponse } from '../../shared/interfaces';
 
 /**
  * Traveler endpoints — FRD §5.3.
@@ -15,7 +17,7 @@ export class TravelersController {
 
   /** GET /users/me/travelers — List all saved travelers (FR-US-028) */
   @Get()
-  async findAll(@CurrentUser() user: JwtPayload) {
+  async findAll(@CurrentUser() user: JwtPayload): Promise<Partial<Traveler>[]> {
     try {
       return await this.travelersService.findAll(user.sub);
     } catch (error) {
@@ -25,7 +27,7 @@ export class TravelersController {
 
   /** POST /users/me/travelers — Add new traveler, max 10 (FR-US-029) */
   @Post()
-  async create(@CurrentUser() user: JwtPayload, @Body() dto: CreateTravelerDto) {
+  async create(@CurrentUser() user: JwtPayload, @Body() dto: CreateTravelerDto): Promise<Partial<Traveler>> {
     try {
       return await this.travelersService.create(user.sub, dto);
     } catch (error) {
@@ -35,7 +37,7 @@ export class TravelersController {
 
   /** GET /users/me/travelers/:id — Detail with decrypted doc (FR-US-032) */
   @Get(':id')
-  async findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  async findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<Partial<Traveler>> {
     try {
       return await this.travelersService.findOne(user.sub, id);
     } catch (error) {
@@ -49,7 +51,7 @@ export class TravelersController {
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: UpdateTravelerDto,
-  ) {
+  ): Promise<Partial<Traveler>> {
     try {
       return await this.travelersService.update(user.sub, id, dto);
     } catch (error) {
@@ -59,7 +61,7 @@ export class TravelersController {
 
   /** DELETE /users/me/travelers/:id — Soft delete (FR-US-031) */
   @Delete(':id')
-  async remove(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  async remove(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<MessageResponse> {
     try {
       return await this.travelersService.remove(user.sub, id);
     } catch (error) {

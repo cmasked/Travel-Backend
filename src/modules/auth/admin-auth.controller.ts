@@ -6,6 +6,7 @@ import { Public } from '../../shared/decorators/public.decorator';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { ClientHeaders, ClientHeadersData } from '../../shared/decorators/client-headers.decorator';
+import { AdminAuthResponse, TokenRefreshResponse, MessageResponse } from '../../shared/interfaces';
 
 /**
  * Admin authentication endpoints.
@@ -23,7 +24,7 @@ export class AdminAuthController {
   async login(
     @Body() dto: LoginDto,
     @ClientHeaders() headers: ClientHeadersData,
-  ) {
+  ): Promise<AdminAuthResponse> {
     try {
       return await this.adminAuthService.login(dto, headers.ip, headers.device);
     } catch (error) {
@@ -33,7 +34,7 @@ export class AdminAuthController {
 
   /** POST /auth/admin/logout — JWT Required */
   @Post('logout')
-  async logout(@CurrentUser() user: JwtPayload) {
+  async logout(@CurrentUser() user: JwtPayload): Promise<MessageResponse> {
     try {
       return await this.adminAuthService.logout(user.sessionId, user.sub);
     } catch (error) {
@@ -44,7 +45,7 @@ export class AdminAuthController {
   /** POST /auth/admin/refresh — Refresh admin token */
   @Public()
   @Post('refresh')
-  async refresh(@Body() dto: RefreshTokenDto) {
+  async refresh(@Body() dto: RefreshTokenDto): Promise<TokenRefreshResponse> {
     try {
       return await this.adminAuthService.refresh(dto.refreshToken);
     } catch (error) {

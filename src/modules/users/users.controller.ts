@@ -8,6 +8,9 @@ import { CreateSubAdminDto } from './dto/create-subadmin.dto';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { AdminGuard } from '../../shared/guards/admin.guard';
+import { UserAccount } from './entities/user-account.entity';
+import { MessageResponse } from '../../shared/interfaces';
+import { UserListResponse } from './interfaces/user-response.interface';
 
 /**
  * User endpoints — FRD §5.2 + §5.5 (admin).
@@ -21,7 +24,7 @@ export class UsersController {
 
   /** GET /users/me — Retrieve own profile (FR-US-021) */
   @Get('me')
-  async getProfile(@CurrentUser() user: JwtPayload) {
+  async getProfile(@CurrentUser() user: JwtPayload): Promise<Partial<UserAccount>> {
     try {
       return await this.usersService.getProfile(user.sub);
     } catch (error) {
@@ -31,7 +34,7 @@ export class UsersController {
 
   /** PATCH /users/me — Update own profile (FR-US-022) */
   @Patch('me')
-  async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
+  async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto): Promise<Partial<UserAccount>> {
     try {
       return await this.usersService.updateProfile(user.sub, dto);
     } catch (error) {
@@ -41,7 +44,7 @@ export class UsersController {
 
   /** POST /users/me/change-password — (FR-US-025) */
   @Post('me/change-password')
-  async changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto) {
+  async changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto): Promise<MessageResponse> {
     try {
       return await this.usersService.changePassword(user.sub, dto);
     } catch (error) {
@@ -62,7 +65,7 @@ export class UsersController {
     @Query('roleId') roleId?: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
-  ) {
+  ): Promise<UserListResponse> {
     try {
       return await this.usersService.findAll({
         page: page ? parseInt(page, 10) : undefined,
@@ -81,7 +84,7 @@ export class UsersController {
   /** GET /users/:id — Admin view (FR-US-044: no PII in logs) */
   @UseGuards(AdminGuard)
   @Get(':id')
-  async findById(@Param('id') id: string) {
+  async findById(@Param('id') id: string): Promise<Partial<UserAccount>> {
     try {
       return await this.usersService.findById(id);
     } catch (error) {
@@ -96,7 +99,7 @@ export class UsersController {
     @Param('id') id: string,
     @Body() dto: UpdateUserStatusDto,
     @CurrentUser() admin: JwtPayload,
-  ) {
+  ): Promise<Partial<UserAccount>> {
     try {
       return await this.usersService.updateStatus(id, dto, admin.sub);
     } catch (error) {
@@ -111,7 +114,7 @@ export class UsersController {
     @Param('id') id: string,
     @Body() dto: AssignRoleDto,
     @CurrentUser() admin: JwtPayload,
-  ) {
+  ): Promise<Partial<UserAccount>> {
     try {
       return await this.usersService.assignRole(id, dto.roleId, admin.sub);
     } catch (error) {
@@ -128,7 +131,7 @@ export class UsersController {
   async createSubAdmin(
     @Body() dto: CreateSubAdminDto,
     @CurrentUser() admin: JwtPayload,
-  ) {
+  ): Promise<Partial<UserAccount>> {
     try {
       return await this.usersService.createSubAdmin(dto, admin.sub);
     } catch (error) {
