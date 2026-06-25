@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { PublicAuthService } from './public-auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -13,19 +13,19 @@ import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { ClientHeaders, ClientHeadersData } from '../../shared/decorators/client-headers.decorator';
 
 /**
- * Authentication endpoints — FRD §5.1.
+ * Public (customer-facing) authentication endpoints.
  * All routes prefixed /auth.
  */
 @Controller('auth')
-export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+export class PublicAuthController {
+  constructor(private readonly publicAuthService: PublicAuthService) {}
 
   /** POST /auth/register — Public, 10/min per IP (FR-US-001) */
   @Public()
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     try {
-      return await this.authService.register(dto);
+      return await this.publicAuthService.register(dto);
     } catch (error) {
       throw error;
     }
@@ -39,7 +39,7 @@ export class AuthController {
     @ClientHeaders() headers: ClientHeadersData,
   ) {
     try {
-      return await this.authService.login(dto, headers.ip, headers.device);
+      return await this.publicAuthService.login(dto, headers.ip, headers.device);
     } catch (error) {
       throw error;
     }
@@ -49,7 +49,7 @@ export class AuthController {
   @Post('logout')
   async logout(@CurrentUser() user: JwtPayload) {
     try {
-      return await this.authService.logout(user.sessionId, user.sub);
+      return await this.publicAuthService.logout(user.sessionId, user.sub);
     } catch (error) {
       throw error;
     }
@@ -60,7 +60,7 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto) {
     try {
-      return await this.authService.refresh(dto);
+      return await this.publicAuthService.refresh(dto.refreshToken);
     } catch (error) {
       throw error;
     }
@@ -71,7 +71,7 @@ export class AuthController {
   @Post('verify-email')
   async verifyEmail(@Body() dto: VerifyOtpDto) {
     try {
-      return await this.authService.verifyEmail(dto);
+      return await this.publicAuthService.verifyEmail(dto);
     } catch (error) {
       throw error;
     }
@@ -82,7 +82,7 @@ export class AuthController {
   @Post('resend-otp')
   async resendOtp(@Body() dto: ResendOtpDto) {
     try {
-      return await this.authService.resendOtp(dto);
+      return await this.publicAuthService.resendOtp(dto);
     } catch (error) {
       throw error;
     }
@@ -93,7 +93,7 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     try {
-      return await this.authService.forgotPassword(dto);
+      return await this.publicAuthService.forgotPassword(dto);
     } catch (error) {
       throw error;
     }
@@ -104,7 +104,7 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     try {
-      return await this.authService.resetPassword(dto);
+      return await this.publicAuthService.resetPassword(dto);
     } catch (error) {
       throw error;
     }
@@ -115,7 +115,7 @@ export class AuthController {
   @Get('validate')
   async validate(@Query('sessionId') sessionId: string) {
     try {
-      return await this.authService.validate(sessionId);
+      return await this.publicAuthService.validate(sessionId);
     } catch (error) {
       throw error;
     }

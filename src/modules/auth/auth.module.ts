@@ -3,8 +3,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { PublicAuthController } from './public-auth.controller';
+import { AdminAuthController } from './admin-auth.controller';
+import { PublicAuthService } from './public-auth.service';
+import { AdminAuthService } from './admin-auth.service';
+import { BaseAuthService } from './base-auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UserAccount } from '../users/entities/user-account.entity';
 import { UserAccountAdditional } from '../users/entities/user-account-additional.entity';
@@ -44,8 +47,8 @@ import { AuthRepository } from './auth.repository';
     }),
     TypeOrmModule.forFeature([UserAccount, UserAccountAdditional, Traveler, LoginLog]),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AuthRepository],
-  exports: [AuthService, JwtModule],
+  controllers: [PublicAuthController, AdminAuthController],
+  providers: [BaseAuthService, PublicAuthService, AdminAuthService, JwtStrategy, AuthRepository],
+  exports: [PublicAuthService, AdminAuthService, JwtModule],
 })
 export class AuthModule {}

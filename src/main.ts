@@ -52,7 +52,7 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(configService.get<number>('app.port', 3001));
   await app.listen(port);
-  logger.log(`🚀 MyGozzo User Service running on port ${port}`);
+  logger.log(`MyGozzo User Service running on port ${port}`);
 }
 
 void bootstrap();
