@@ -7,6 +7,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { ClientHeaders, ClientHeadersData } from '../../shared/decorators/client-headers.decorator';
 import { AdminAuthResponse, TokenRefreshResponse, MessageResponse } from '../../shared/interfaces';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Admin authentication endpoints.
@@ -14,11 +15,13 @@ import { AdminAuthResponse, TokenRefreshResponse, MessageResponse } from '../../
  * No registration here — admins are created via POST /users/sub-admin.
  * blaise matuti
  */
+@ApiTags('Admin Auth')
 @Controller('auth/admin')
 export class AdminAuthController {
   constructor(private readonly adminAuthService: AdminAuthService) { }
 
   /** POST /auth/admin/login — Public (admin login with roleId check) */
+  @ApiOperation({ summary: 'Admin Login', description: 'Authenticate an admin user and receive tokens.' })
   @Public()
   @Post('login')
   async login(
@@ -33,6 +36,8 @@ export class AdminAuthController {
   }
 
   /** POST /auth/admin/logout — JWT Required */
+  @ApiOperation({ summary: 'Admin Logout', description: 'Invalidates the current session token.' })
+  @ApiBearerAuth()
   @Post('logout')
   async logout(@CurrentUser() user: JwtPayload): Promise<MessageResponse> {
     try {
@@ -43,6 +48,7 @@ export class AdminAuthController {
   }
 
   /** POST /auth/admin/refresh — Refresh admin token */
+  @ApiOperation({ summary: 'Refresh Token', description: 'Get a new access token using a refresh token.' })
   @Public()
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto): Promise<TokenRefreshResponse> {

@@ -5,15 +5,19 @@ import { AdminGuard } from '../../shared/guards/admin.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { MessageResponse } from '../../shared/interfaces';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Audit endpoints — FRD §5.5.
  */
+@ApiTags('Audit')
+@ApiBearerAuth()
 @Controller('users')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   /** POST /users/:id/force-logout — Admin force logout (FR-US-042) */
+  @ApiOperation({ summary: 'Force Logout User', description: 'Force a specific user to logout from their sessions.' })
   @UseGuards(AdminGuard)
   @Post(':id/force-logout')
   async forceLogout(

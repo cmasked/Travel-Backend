@@ -1,22 +1,27 @@
 import { IsDate, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TravelerTitle, Gender, DocumentType } from '../../../shared/enums';
+import { ApiProperty } from '@nestjs/swagger';
 
 /** Full update traveler DTO — FRD §FR-US-030 (PUT) */
 export class UpdateTravelerDto {
+  @ApiProperty({ example: TravelerTitle.MR, enum: TravelerTitle })
   @IsEnum(TravelerTitle)
   title!: TravelerTitle;
 
+  @ApiProperty({ example: 'John' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
   firstName!: string;
 
+  @ApiProperty({ example: 'Doe' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
   lastName!: string;
 
+  @ApiProperty({ example: '1990-01-01' })
   @Type(() => Date)
   @IsDate()
   dob!: Date;

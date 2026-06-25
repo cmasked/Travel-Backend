@@ -7,15 +7,19 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { Permission } from './entities/permission.entity';
 import { MessageResponse } from '../../shared/interfaces';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Permissions endpoints — FRD §5.4.
  */
+@ApiTags('Permissions')
 @Controller()
 export class PermissionsController {
-  constructor(private readonly permissionsService: PermissionsService) {}
+  constructor(private readonly permissionsService: PermissionsService) { }
 
   /** GET /roles/:id/permissions — Permission matrix for a role (FR-US-035) */
+  @ApiOperation({ summary: 'Get Permissions for Role', description: 'Retrieve the permission matrix for a specific role.' })
+  @ApiBearerAuth()
   @UseGuards(AdminGuard)
   @Get('roles/:id/permissions')
   async findByRole(@Param('id') roleId: string): Promise<Permission[]> {
@@ -27,6 +31,8 @@ export class PermissionsController {
   }
 
   /** PUT /roles/:id/permissions — Upsert full permission set (FR-US-036) */
+  @ApiOperation({ summary: 'Upsert Permissions', description: 'Update the full permission matrix for a role.' })
+  @ApiBearerAuth()
   @UseGuards(AdminGuard)
   @Put('roles/:id/permissions')
   async upsertForRole(
@@ -45,6 +51,7 @@ export class PermissionsController {
    * GET /permissions/check — Internal permission check (FR-US-037).
    * Called by API Gateway. Must be < 15ms p95. Redis-cached.
    */
+  @ApiOperation({ summary: 'Check Permission', description: 'Internal permission check called by API Gateway.' })
   @Public()
   @Get('permissions/check')
   async checkPermission(

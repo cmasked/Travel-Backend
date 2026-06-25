@@ -9,12 +9,16 @@ import { Public } from '../../shared/decorators/public.decorator';
 import { Banner } from './entities/banner.entity';
 import { BannerListResponse } from './interfaces/banner-response.interface';
 import { MessageResponse } from '../../shared/interfaces';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
+@ApiTags('Banners')
 @Controller('banners')
 export class BannersController {
-  constructor(private readonly bannersService: BannersService) {}
+  constructor(private readonly bannersService: BannersService) { }
 
   /** POST /banners — Create a new banner (Admin) */
+  @ApiOperation({ summary: 'Create Banner', description: 'Create a new promotional banner. Admin only.' })
+  @ApiBearerAuth()
   @UseGuards(AdminGuard)
   @Post()
   async create(@Body() createBannerDto: CreateBannerDto, @CurrentUser() admin: JwtPayload): Promise<Partial<Banner>> {
@@ -26,9 +30,12 @@ export class BannersController {
   }
 
   /** GET /banners/public — Get all active banners (Public Frontend) */
+  @ApiOperation({ summary: 'Get Public Banners', description: 'Retrieve all active banners for the public frontend.' })
+  @ApiQuery({ name: 'bannerModule', required: false, type: String })
   @Public()
   @Get('public')
-  async findActivePublic(@Query('bannerModule') bannerModule?: string): Promise<Banner[]> {
+  async findActivePublic(@Query('bannerModule') bannerModule?: string
+  ): Promise<Banner[]> {
     try {
       return await this.bannersService.findActivePublic(bannerModule);
     } catch (error) {
@@ -37,6 +44,11 @@ export class BannersController {
   }
 
   /** GET /banners — List all banners, paginated (Admin) */
+  @ApiOperation({ summary: 'List All Banners', description: 'Retrieve a paginated list of all banners. Admin only.' })
+  @ApiBearerAuth()
+  @ApiQuery({ name: 'page', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: String })
+  @ApiQuery({ name: 'bannerModule', required: false, type: String })
   @UseGuards(AdminGuard)
   @Get()
   async findAll(
@@ -56,6 +68,8 @@ export class BannersController {
   }
 
   /** GET /banners/:id — Get a single banner (Admin) */
+  @ApiOperation({ summary: 'Get Banner', description: 'Retrieve detail for a specific banner. Admin only.' })
+  @ApiBearerAuth()
   @UseGuards(AdminGuard)
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<Partial<Banner>> {
@@ -67,6 +81,8 @@ export class BannersController {
   }
 
   /** PATCH /banners/:id — Update a banner (Admin) */
+  @ApiOperation({ summary: 'Update Banner', description: 'Update an existing banner. Admin only.' })
+  @ApiBearerAuth()
   @UseGuards(AdminGuard)
   @Patch(':id')
   async update(
@@ -82,6 +98,8 @@ export class BannersController {
   }
 
   /** DELETE /banners/:id — Soft delete a banner (Admin) */
+  @ApiOperation({ summary: 'Delete Banner', description: 'Soft delete a banner. Admin only.' })
+  @ApiBearerAuth()
   @UseGuards(AdminGuard)
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<MessageResponse> {
