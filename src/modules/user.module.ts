@@ -11,6 +11,7 @@ import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { AuditModule } from './audit/audit.module';
 import { MarkupsModule } from './markups/markups.module';
+import { BannersModule } from './banners/banners.module';
 import { SeederModule } from '../seeder/seeder.module';
 
 @Module({
@@ -50,8 +51,9 @@ import { SeederModule } from '../seeder/seeder.module';
     PermissionsModule,
     AuditModule,
     MarkupsModule,
+    BannersModule,
     SeederModule,
   ],
-  exports: [AuthModule, UsersModule, TravelersModule, RolesModule, PermissionsModule, AuditModule, MarkupsModule, SeederModule],
+  exports: [AuthModule, UsersModule, TravelersModule, RolesModule, PermissionsModule, AuditModule, MarkupsModule, BannersModule, SeederModule],
 })
 export class UserModule {}
