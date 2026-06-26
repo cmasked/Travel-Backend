@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { Gender, Title } from '../../../shared/enums';
+import { Gender, Title } from '../../../../shared/enums';
 import { ApiProperty } from '@nestjs/swagger';
 
 /**

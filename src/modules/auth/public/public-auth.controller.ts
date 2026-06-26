@@ -7,11 +7,11 @@ import { ResendOtpDto } from './dto/resend-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { Public } from '../../shared/decorators/public.decorator';
-import { CurrentUser } from '../../shared/decorators/current-user.decorator';
-import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
-import { ClientHeaders, ClientHeadersData } from '../../shared/decorators/client-headers.decorator';
-import { RegisterResponse, AuthResponse, MessageResponse, TokenRefreshResponse, SessionValidationResponse } from '../../shared/interfaces';
+import { Public } from '../../../shared/decorators/public.decorator';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+import { ClientHeaders, ClientHeadersData } from '../../../shared/decorators/client-headers.decorator';
+import { RegisterResponse, AuthResponse, MessageResponse, TokenRefreshResponse, SessionValidationResponse } from '../../../shared/interfaces';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
