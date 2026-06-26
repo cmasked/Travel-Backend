@@ -1,5 +1,6 @@
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Gender, Title } from '../../../shared/enums';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Profile update DTO — FRD §FR-US-022.
@@ -7,11 +8,13 @@ import { Gender, Title } from '../../../shared/enums';
  * user_type, auth_provider) are excluded from the DTO.
  */
 export class UpdateProfileDto {
+  @ApiProperty({ example: 'John', required: false })
   @IsOptional()
   @IsString()
   @MaxLength(50)
   firstName?: string;
 
+  @ApiProperty({ example: 'Doe', required: false })
   @IsOptional()
   @IsString()
   @MaxLength(50)

@@ -1,14 +1,18 @@
 import { IsEmail, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /** Reset password with OTP — FRD §FR-US-026 */
 export class ResetPasswordDto {
+  @ApiProperty({ example: 'john.doe@example.com' })
   @IsEmail()
   email!: string;
 
+  @ApiProperty({ example: '123456' })
   @IsString()
   @Length(6, 6)
   otp!: string;
 
+  @ApiProperty({ example: 'NewP@ssw0rd!' })
   @IsString()
   @MinLength(8)
   @MaxLength(100)

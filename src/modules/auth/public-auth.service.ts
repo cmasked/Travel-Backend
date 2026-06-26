@@ -265,6 +265,10 @@ export class PublicAuthService extends BaseAuthService {
         throw new UnauthorizedException({ message: 'Invalid credentials', code: ErrorCodes.INVALID_CREDENTIALS });
       }
 
+      if (user.roleId) {
+        throw new ForbiddenException({ message: 'Admins must log in through the admin portal', code: ErrorCodes.PERMISSION_DENIED });
+      }
+
       if (!user.isEmailVerified) {
         throw new ForbiddenException({ message: 'Email not verified', code: ErrorCodes.EMAIL_NOT_VERIFIED });
       }

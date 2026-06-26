@@ -11,11 +11,14 @@ import { AdminGuard } from '../../shared/guards/admin.guard';
 import { UserAccount } from './entities/user-account.entity';
 import { MessageResponse } from '../../shared/interfaces';
 import { UserListResponse } from './interfaces/user-response.interface';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * User endpoints — FRD §5.2 + §5.5 (admin).
  * Routes prefixed /users.
  */
+@ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
@@ -23,6 +26,7 @@ export class UsersController {
   // ─── Self-service (JWT required) ─────────────────────────────
 
   /** GET /users/me — Retrieve own profile (FR-US-021) */
+  @ApiOperation({ summary: 'Get Own Profile', description: 'Retrieve the profile of the currently authenticated user.' })
   @Get('me')
   async getProfile(@CurrentUser() user: JwtPayload): Promise<Partial<UserAccount>> {
     try {
@@ -33,6 +37,7 @@ export class UsersController {
   }
 
   /** PATCH /users/me — Update own profile (FR-US-022) */
+  @ApiOperation({ summary: 'Update Own Profile', description: 'Update the profile of the currently authenticated user.' })
   @Patch('me')
   async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto): Promise<Partial<UserAccount>> {
     try {
@@ -43,6 +48,7 @@ export class UsersController {
   }
 
   /** POST /users/me/change-password — (FR-US-025) */
+  @ApiOperation({ summary: 'Change Password', description: 'Change the password of the currently authenticated user.' })
   @Post('me/change-password')
   async changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto): Promise<MessageResponse> {
     try {
@@ -55,6 +61,7 @@ export class UsersController {
   // ─── Admin endpoints ─────────────────────────────────────────
 
   /** GET /users — List users, paginated, filterable by date and role (Admin) */
+  @ApiOperation({ summary: 'List Users', description: 'Retrieve a paginated list of users. Admin only.' })
   @UseGuards(AdminGuard)
   @Get()
   async findAll(
@@ -82,6 +89,7 @@ export class UsersController {
   }
 
   /** GET /users/:id — Admin view (FR-US-044: no PII in logs) */
+  @ApiOperation({ summary: 'Get User by ID', description: 'Retrieve details of a specific user. Admin only.' })
   @UseGuards(AdminGuard)
   @Get(':id')
   async findById(@Param('id') id: string): Promise<Partial<UserAccount>> {
@@ -93,6 +101,7 @@ export class UsersController {
   }
 
   /** PATCH /users/:id/status — Update user status (Admin) */
+  @ApiOperation({ summary: 'Update User Status', description: 'Update the status of a specific user. Admin only.' })
   @UseGuards(AdminGuard)
   @Patch(':id/status')
   async updateStatus(
@@ -108,6 +117,7 @@ export class UsersController {
   }
 
   /** POST /users/:id/role — Assign role to user (FR-US-038) */
+  @ApiOperation({ summary: 'Assign Role', description: 'Assign a role to a specific user. Admin only.' })
   @UseGuards(AdminGuard)
   @Post(':id/role')
   async assignRole(
@@ -126,6 +136,7 @@ export class UsersController {
    * POST /users/sub-admin — Create a new sub-admin user
    * Only existing Admins with a valid JWT token can call this.
    */
+  @ApiOperation({ summary: 'Create Sub-Admin', description: 'Create a new sub-admin user. Admin only.' })
   @UseGuards(AdminGuard)
   @Post('sub-admin')
   async createSubAdmin(
