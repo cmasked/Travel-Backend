@@ -2,11 +2,11 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { AdminAuthService } from './admin-auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { Public } from '../../shared/decorators/public.decorator';
-import { CurrentUser } from '../../shared/decorators/current-user.decorator';
-import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
-import { ClientHeaders, ClientHeadersData } from '../../shared/decorators/client-headers.decorator';
-import { AdminAuthResponse, TokenRefreshResponse, MessageResponse } from '../../shared/interfaces';
+import { Public } from '../../../shared/decorators/public.decorator';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+import { ClientHeaders, ClientHeadersData } from '../../../shared/decorators/client-headers.decorator';
+import { AdminAuthResponse, TokenRefreshResponse, MessageResponse } from '../../../shared/interfaces';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 /**

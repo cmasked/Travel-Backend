@@ -10,17 +10,14 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { UserAccount } from './entities/user-account.entity';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { UserAccount } from '../entities/user-account.entity';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { CreateSubAdminDto } from './dto/create-subadmin.dto';
-import { ErrorCodes } from '../../shared/constants/error-codes';
-import { UserStatus, UserType, AuthProvider, TravelerTitle } from '../../shared/enums';
-import { RedisService } from '../redis/redis.service';
-import { UsersRepository } from './users.repository';
-import { MessageResponse } from '../../shared/interfaces';
-import { UserListQuery, UserListResponse } from './interfaces/user-response.interface';
+import { ErrorCodes } from '../../../shared/constants/error-codes';
+import { UserStatus, UserType, AuthProvider, TravelerTitle } from '../../../shared/enums';
+import { RedisService } from '../../redis/redis.service';
+import { UsersRepository } from '../users.repository';
+import { UserListQuery, UserListResponse } from '../interfaces/user-response.interface';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -35,103 +32,15 @@ const VALID_TRANSITIONS: Record<string, UserStatus[]> = {
 };
 
 @Injectable()
-export class UsersService {
-  private readonly logger = new Logger(UsersService.name);
+export class AdminUsersService {
+  private readonly logger = new Logger(AdminUsersService.name);
 
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly redisService: RedisService,
   ) { }
 
-  /**
-   * FR-US-021 — GET /users/me. Never return password hash.
-   */
-  async getProfile(userId: string): Promise<Partial<UserAccount>> {
-    try {
-      const user = await this.usersRepository.findById(userId);
-      if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
-      return this.sanitizeUser(user);
-    } catch (error) {
-      this.handleError(error, 'getProfile');
-    }
-  }
-
-  /**
-   * FR-US-022 — PATCH /users/me. Partial update, immutable fields blocked.
-   */
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<Partial<UserAccount>> {
-    try {
-      const user = await this.usersRepository.findById(userId);
-      if (!user) throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
-
-      if (dto.firstName !== undefined) user.firstName = dto.firstName;
-      if (dto.lastName !== undefined) user.lastName = dto.lastName;
-      if (dto.gender !== undefined) user.gender = dto.gender;
-      if (dto.title !== undefined) user.title = dto.title;
-      if (dto.dob !== undefined) user.dob = new Date(dto.dob);
-      if (dto.mobileNo !== undefined) user.mobileNo = dto.mobileNo;
-      if (dto.dialCode !== undefined) user.dialCode = dto.dialCode;
-      if (dto.dialCountry !== undefined) user.dialCountry = dto.dialCountry;
-      if (dto.nationality !== undefined) user.nationality = dto.nationality;
-      if (dto.preferredLanguage !== undefined) user.preferredLanguage = dto.preferredLanguage;
-      if (dto.preferredCurrency !== undefined) user.preferredCurrency = dto.preferredCurrency;
-      if (dto.state !== undefined) user.state = dto.state;
-      if (dto.country !== undefined) user.country = dto.country;
-      if (dto.address1 !== undefined) user.address1 = dto.address1;
-      if (dto.postalCode !== undefined) user.postalCode = dto.postalCode;
-      if (dto.city !== undefined) user.city = dto.city;
-
-      user.updatedBy = userId;
-      const saved = await this.usersRepository.save(user);
-      return this.sanitizeUser(saved);
-    } catch (error) {
-      this.handleError(error, 'updateProfile');
-    }
-  }
-
-  /**
-   * FR-US-025 — Change password. Verify current → hash new → invalidate all sessions.
-   */
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<MessageResponse> {
-    try {
-      const user = await this.usersRepository.findById(userId);
-      if (!user || !user.password) {
-        throw new NotFoundException({ message: 'User not found', code: ErrorCodes.USER_NOT_FOUND });
-      }
-
-      const currentValid = await bcrypt.compare(dto.currentPassword, user.password);
-      if (!currentValid) {
-        throw new ForbiddenException({ message: 'Current password is incorrect', code: ErrorCodes.CURRENT_PASSWORD_WRONG });
-      }
-
-      const sameAsOld = await bcrypt.compare(dto.newPassword, user.password);
-      if (sameAsOld) {
-        throw new UnprocessableEntityException({ message: 'New password must differ from current', code: ErrorCodes.PASSWORD_SAME_AS_OLD });
-      }
-
-      const lp = dto.newPassword.toLowerCase();
-      if (lp.includes(user.email.split('@')[0]) || lp.includes(user.firstName.toLowerCase()) || lp.includes(user.lastName.toLowerCase())) {
-        throw new UnprocessableEntityException({ message: 'Password must not contain your email or name', code: ErrorCodes.PASSWORD_CONTAINS_PII });
-      }
-
-      user.password = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
-      await this.usersRepository.save(user);
-      await this.usersRepository.updateLoginSessionsExpired(userId);
-
-      await this.redisService.publish('user.password_changed', {
-        user_id: userId,
-        correlation_id: crypto.randomUUID(),
-      });
-
-      return { message: 'Password changed. All sessions invalidated.' };
-    } catch (error) {
-      this.handleError(error, 'changePassword');
-    }
-  }
-
-  // ─── Admin endpoints ─────────────────────────────────────────
-
-  /** GET /users — Admin list, paginated, filterable by date and role */
+  /** GET /admin/users — Admin list, paginated, filterable by date and role */
   async findAll(query: UserListQuery): Promise<UserListResponse> {
     try {
       const page = query.page ?? 1;
@@ -160,7 +69,7 @@ export class UsersService {
     }
   }
 
-  /** GET /users/:id — Admin view */
+  /** GET /admin/users/:id — Admin view */
   async findById(userId: string): Promise<Partial<UserAccount>> {
     try {
       const user = await this.usersRepository.findById(userId);
@@ -172,7 +81,7 @@ export class UsersService {
   }
 
   /**
-   * PATCH /users/:id/status — Admin status change per FRD §6.1 state machine.
+   * PATCH /admin/users/:id/status — Admin status change per FRD §6.1 state machine.
    */
   async updateStatus(userId: string, dto: UpdateUserStatusDto, adminId: string): Promise<Partial<UserAccount>> {
     try {
@@ -224,7 +133,7 @@ export class UsersService {
     }
   }
 
-  /** POST /users/:id/role — Assign role (FR-US-038) */
+  /** POST /admin/users/:id/role — Assign role (FR-US-038) */
   async assignRole(userId: string, roleId: string, adminId: string): Promise<Partial<UserAccount>> {
     try {
       const user = await this.usersRepository.findById(userId);
@@ -241,7 +150,6 @@ export class UsersService {
 
   async createSubAdmin(dto: CreateSubAdminDto, creatorAdminId: string): Promise<Partial<UserAccount>> {
     try {
-
       const email = dto.email.toLowerCase();
       const existing = await this.usersRepository.findByEmail(email);
       if (existing) {
@@ -253,28 +161,24 @@ export class UsersService {
         throw new NotFoundException({ message: 'Role not found', code: ErrorCodes.USER_NOT_FOUND });
       }
 
-
-
       const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
-      // Step 4: Create and save the UserAccount
       const savedUser = await this.usersRepository.save(
         this.usersRepository.createUser({
           email,
           password: passwordHash,
           firstName: dto.firstName,
           lastName: dto.lastName,
-          userType: UserType.USER,           // Sub-admins use 'user' type but have a role_id
-          status: UserStatus.ACTIVE,          // Immediately active (admin trusts them)
-          authProvider: AuthProvider.LOCAL,    // They log in with email + password
-          isEmailVerified: true,              // Skip OTP since admin created them
+          userType: UserType.USER,
+          status: UserStatus.ACTIVE,
+          authProvider: AuthProvider.LOCAL,
+          isEmailVerified: true,
           roleId: role.id,
           createdBy: creatorAdminId,
           updatedBy: creatorAdminId,
         })
       );
 
-      // Step 5: Create linked Traveler profile
       await this.usersRepository.saveTraveler(
         this.usersRepository.createTraveler({
           userId: savedUser.userId,
@@ -286,7 +190,6 @@ export class UsersService {
         })
       );
 
-      // Step 6: Create linked UserAccountAdditional profile
       await this.usersRepository.saveAdditional(
         this.usersRepository.createAdditional({
           userId: savedUser.userId,
@@ -294,7 +197,6 @@ export class UsersService {
         })
       );
 
-      // Step 7: Return the user but strip the password hash
       return this.sanitizeUser(savedUser);
     } catch (error) {
       this.handleError(error, 'createSubAdmin');
@@ -312,10 +214,7 @@ export class UsersService {
       throw error;
     }
 
-    this.logger.error(`UsersService.${method} failed`, error instanceof Error ? error.stack : undefined);
-    throw new InternalServerErrorException('Unexpected user service error');
+    this.logger.error(`AdminUsersService.${method} failed`, error instanceof Error ? error.stack : undefined);
+    throw new InternalServerErrorException('Unexpected admin user service error');
   }
 }
-
-
-
