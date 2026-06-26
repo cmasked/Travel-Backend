@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { BannersService } from './banners.service';
 import { CreateBannerDto } from './dto/create-banner.dto';
@@ -12,6 +13,7 @@ import { MessageResponse } from '../../shared/interfaces';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Banners')
+@ApiMandatoryHeaders()
 @Controller('banners')
 export class BannersController {
   constructor(private readonly bannersService: BannersService) { }

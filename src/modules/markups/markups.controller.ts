@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { MarkupsService } from './markups.service';
 import { CreateMarkupDto } from './dto/create-markup.dto';
@@ -16,6 +17,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('Markups')
 @ApiBearerAuth()
 @UseGuards(AdminGuard)
+@ApiMandatoryHeaders()
 @Controller('markups')
 export class MarkupsController {
   constructor(private readonly markupsService: MarkupsService) { }

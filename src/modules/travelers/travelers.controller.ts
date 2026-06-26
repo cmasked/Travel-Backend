@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { TravelersService } from './travelers.service';
 import { CreateTravelerDto } from './dto/create-traveler.dto';
@@ -14,6 +15,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
  */
 @ApiTags('Travelers')
 @ApiBearerAuth()
+@ApiMandatoryHeaders()
 @Controller('users/me/travelers')
 export class TravelersController {
   constructor(private readonly travelersService: TravelersService) {}

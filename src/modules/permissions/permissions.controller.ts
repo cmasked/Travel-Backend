@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
 import { UpsertPermissionsDto } from './dto/upsert-permissions.dto';
@@ -13,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
  * Permissions endpoints — FRD §5.4.
  */
 @ApiTags('Permissions')
+@ApiMandatoryHeaders()
 @Controller()
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) { }

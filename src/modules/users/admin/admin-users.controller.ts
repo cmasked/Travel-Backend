@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AdminUsersService } from './admin-users.service';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
@@ -13,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('Admin Users')
 @ApiBearerAuth()
 @UseGuards(AdminGuard)
+@ApiMandatoryHeaders()
 @Controller('admin/users')
 export class AdminUsersController {
   constructor(private readonly adminUsersService: AdminUsersService) { }

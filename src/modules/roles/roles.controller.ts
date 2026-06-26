@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -13,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('Roles')
 @ApiBearerAuth()
 @UseGuards(AdminGuard)
+@ApiMandatoryHeaders()
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
