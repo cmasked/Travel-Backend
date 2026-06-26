@@ -19,12 +19,12 @@ export class RolesService {
     private readonly rolesRepository: RolesRepository,
   ) {}
 
-  /** FR-US-033 — List all active, non-deleted roles. Filterable by type. */
-  async findAll(type?: string): Promise<Role[]> {
+  /** FR-US-033 — List all active, non-deleted roles. Filterable by type and name. */
+  async findAll(type?: string, name?: string): Promise<Role[]> {
     try {
       const where: Record<string, unknown> = { isActive: true, isDeleted: false };
       if (type) where['type'] = type;
-      return this.rolesRepository.findAll(where);
+      return this.rolesRepository.findAll(where, name);
     } catch (error) {
       this.handleError(error, 'findAll');
     }

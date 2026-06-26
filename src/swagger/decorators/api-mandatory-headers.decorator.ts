@@ -1,15 +1,28 @@
-import { applyDecorators } from '@nestjs/common';
+import { applyDecorators, SetMetadata } from '@nestjs/common';
 import { ApiHeader } from '@nestjs/swagger';
+import { MANDATORY_HEADERS } from '../../shared/constants/mandatory-headers.constant';
 
-/**
- * Custom decorator to inject mandatory global headers into Swagger UI.
- * This avoids registering them as API keys, placing them directly into the headers section.
- */
+export const MANDATORY_HEADERS_KEY = 'mandatory_headers';
+
 export function ApiMandatoryHeaders() {
+  const headerDecorators = MANDATORY_HEADERS.map((header) => {
+    const schema: any = { type: 'string', default: header.default };
+    if (header.enum) {
+      schema.enum = header.enum;
+    }
+    if (header.swaggerPattern) {
+      schema.pattern = header.swaggerPattern;
+    }
+    return ApiHeader({
+      name: header.name,
+      description: header.description,
+      required: true,
+      schema,
+    });
+  });
+
   return applyDecorators(
-    ApiHeader({ name: 'x-client-ip', description: 'e.g., 127.0.0.1', required: true }),
-    ApiHeader({ name: 'x-client-language', description: 'e.g., en', required: true }),
-    ApiHeader({ name: 'x-client-currency', description: 'e.g., USD', required: true }),
-    ApiHeader({ name: 'x-client-device', description: 'e.g., web', required: true }),
+    SetMetadata(MANDATORY_HEADERS_KEY, MANDATORY_HEADERS),
+    ...headerDecorators
   );
 }

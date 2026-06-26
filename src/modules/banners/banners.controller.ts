@@ -36,8 +36,7 @@ export class BannersController {
   @ApiQuery({ name: 'bannerModule', required: false, type: String })
   @Public()
   @Get('public')
-  async findActivePublic(@Query('bannerModule') bannerModule?: string
-  ): Promise<Banner[]> {
+  async findActivePublic(@Query('bannerModule') bannerModule?: string): Promise<Banner[]> {
     try {
       return await this.bannersService.findActivePublic(bannerModule);
     } catch (error) {
@@ -51,18 +50,21 @@ export class BannersController {
   @ApiQuery({ name: 'page', required: false, type: String })
   @ApiQuery({ name: 'limit', required: false, type: String })
   @ApiQuery({ name: 'bannerModule', required: false, type: String })
+  @ApiQuery({ name: 'name', required: false, type: String, description: 'Search by banner name' })
   @UseGuards(AdminGuard)
   @Get()
   async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('bannerModule') bannerModule?: string,
+    @Query('name') name?: string,
   ): Promise<BannerListResponse> {
     try {
       return await this.bannersService.findAll({
         page: page ? parseInt(page, 10) : undefined,
         limit: limit ? parseInt(limit, 10) : undefined,
         bannerModule,
+        name,
       });
     } catch (error) {
       throw error;

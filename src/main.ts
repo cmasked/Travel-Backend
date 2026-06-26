@@ -1,5 +1,5 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { MandatoryHeadersGuard } from './shared/guards/mandatory-headers.guard';
@@ -24,7 +24,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  app.useGlobalGuards(new MandatoryHeadersGuard());
+  app.useGlobalGuards(new MandatoryHeadersGuard(app.get(Reflector)));
 
   app.enableCors();
 

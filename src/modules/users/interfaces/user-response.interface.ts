@@ -8,6 +8,7 @@ export interface UserListQuery extends PaginatedQuery {
   roleId?: string;
   fromDate?: string;
   toDate?: string;
+  name?: string;
 }
 
 export type UserListResponse = PaginatedResponse<Partial<UserAccount>>;

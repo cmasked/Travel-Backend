@@ -1,5 +1,5 @@
 import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { MarkupsService } from './markups.service';
 import { CreateMarkupDto } from './dto/create-markup.dto';
 import { UpdateMarkupDto } from './dto/update-markup.dto';
@@ -8,7 +8,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { Markup } from './entities/markup.entity';
 import { MessageResponse } from '../../shared/interfaces';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 /**
  * Markup endpoints — Admin only.
@@ -38,10 +38,11 @@ export class MarkupsController {
 
   /** GET /markups — List all markups */
   @ApiOperation({ summary: 'List Markups', description: 'Retrieve all markup rules.' })
+  @ApiQuery({ name: 'name', required: false, type: String, description: 'Search by markup name' })
   @Get()
-  async findAll(): Promise<Markup[]> {
+  async findAll(@Query('name') name?: string): Promise<Markup[]> {
     try {
-      return await this.markupsService.findAll();
+      return await this.markupsService.findAll(name);
     } catch (error) {
       throw error;
     }

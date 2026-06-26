@@ -30,9 +30,9 @@ export class TravelersService {
    * Ordered by primary_traveler desc, created_at asc.
    * document_number is NOT decrypted in list view.
    */
-  async findAll(userId: string): Promise<Partial<Traveler>[]> {
+  async findAll(userId: string, name?: string): Promise<Partial<Traveler>[]> {
     try {
-      const travelers = await this.travelersRepository.findAll(userId);
+      const travelers = await this.travelersRepository.findAll(userId, name);
       return travelers.map((t) => this.sanitize(t, false));
     } catch (error) {
       this.handleError(error, 'findAll');

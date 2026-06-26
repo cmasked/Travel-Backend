@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Traveler } from './entities/traveler.entity';
 
 @Injectable()
@@ -10,8 +10,18 @@ export class TravelersRepository {
     private readonly travelerRepo: Repository<Traveler>,
   ) {}
 
-  findAll(userId: string): Promise<Traveler[]> {
-    return this.travelerRepo.find({ where: { userId, isDeleted: false }, order: { primaryTraveler: 'DESC', createdAt: 'ASC' } });
+  findAll(userId: string, name?: string): Promise<Traveler[]> {
+    const where: any = { userId, isDeleted: false };
+    
+    let finalWhere: any = where;
+    if (name) {
+      finalWhere = [
+        { ...where, firstName: ILike(`%${name}%`) },
+        { ...where, lastName: ILike(`%${name}%`) },
+      ];
+    }
+    
+    return this.travelerRepo.find({ where: finalWhere, order: { primaryTraveler: 'DESC', createdAt: 'DESC' } });
   }
 
   countByUser(userId: string): Promise<number> {
