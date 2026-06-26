@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -5,7 +6,7 @@ import { AdminGuard } from '../../shared/guards/admin.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { Role } from './entities/role.entity';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 /**
  * Roles endpoints — FRD §5.4. Admin JWT required.
@@ -13,16 +14,19 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('Roles')
 @ApiBearerAuth()
 @UseGuards(AdminGuard)
+@ApiMandatoryHeaders()
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
-  /** GET /roles — List all roles, filterable by type (FR-US-033) */
-  @ApiOperation({ summary: 'List Roles', description: 'Retrieve all roles, optionally filterable by type.' })
+  /** GET /roles — List all roles, filterable by type and name (FR-US-033) */
+  @ApiOperation({ summary: 'List Roles', description: 'Retrieve all roles, optionally filterable by type and name.' })
+  @ApiQuery({ name: 'type', required: false, type: String })
+  @ApiQuery({ name: 'name', required: false, type: String, description: 'Search by role name' })
   @Get()
-  async findAll(@Query('type') type?: string): Promise<Role[]> {
+  async findAll(@Query('type') type?: string, @Query('name') name?: string): Promise<Role[]> {
     try {
-      return await this.rolesService.findAll(type);
+      return await this.rolesService.findAll(type, name);
     } catch (error) {
       throw error;
     }

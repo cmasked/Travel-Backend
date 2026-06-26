@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { PublicUsersService } from './public-users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -10,6 +11,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Public Users')
 @ApiBearerAuth()
+@ApiMandatoryHeaders()
 @Controller('users')
 export class PublicUsersController {
   constructor(private readonly publicUsersService: PublicUsersService) { }

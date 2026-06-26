@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AdminUsersService } from './admin-users.service';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
@@ -8,17 +9,26 @@ import { JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
 import { AdminGuard } from '../../../shared/guards/admin.guard';
 import { UserAccount } from '../entities/user-account.entity';
 import { UserListResponse } from '../interfaces/user-response.interface';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Admin Users')
 @ApiBearerAuth()
 @UseGuards(AdminGuard)
+@ApiMandatoryHeaders()
 @Controller('admin/users')
 export class AdminUsersController {
   constructor(private readonly adminUsersService: AdminUsersService) { }
 
   /** GET /admin/users — List users, paginated, filterable by date and role (Admin) */
   @ApiOperation({ summary: 'List Users', description: 'Retrieve a paginated list of users. Admin only.' })
+  @ApiQuery({ name: 'page', required: false, type: String, description: 'Page number', example: '1' })
+  @ApiQuery({ name: 'limit', required: false, type: String, description: 'Items per page', example: '20' })
+  @ApiQuery({ name: 'userType', required: false, type: String, description: 'Filter by user type' })
+  @ApiQuery({ name: 'status', required: false, type: String, description: 'Filter by user status' })
+  @ApiQuery({ name: 'roleId', required: false, type: String, description: 'Filter by role ID' })
+  @ApiQuery({ name: 'fromDate', required: false, type: String, description: 'Filter by start date' })
+  @ApiQuery({ name: 'toDate', required: false, type: String, description: 'Filter by end date' })
+  @ApiQuery({ name: 'name', required: false, type: String, description: 'Search by first or last name' })
   @Get()
   async findAll(
     @Query('page') page?: string,
@@ -28,6 +38,7 @@ export class AdminUsersController {
     @Query('roleId') roleId?: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
+    @Query('name') name?: string,
   ): Promise<UserListResponse> {
     try {
       return await this.adminUsersService.findAll({
@@ -38,6 +49,7 @@ export class AdminUsersController {
         roleId,
         fromDate,
         toDate,
+        name,
       });
     } catch (error) {
       throw error;
@@ -55,16 +67,15 @@ export class AdminUsersController {
     }
   }
 
-  /** PATCH /admin/users/:id/status — Update user status (Admin) */
-  @ApiOperation({ summary: 'Update User Status', description: 'Update the status of a specific user. Admin only.' })
-  @Patch(':id/status')
+  /** PATCH /admin/users/status — Update user status (Admin) */
+  @ApiOperation({ summary: 'Update User Status', description: 'Update the status of a specific user using the JSON body. Admin only.' })
+  @Patch('status')
   async updateStatus(
-    @Param('id') id: string,
     @Body() dto: UpdateUserStatusDto,
     @CurrentUser() admin: JwtPayload,
   ): Promise<Partial<UserAccount>> {
     try {
-      return await this.adminUsersService.updateStatus(id, dto, admin.sub);
+      return await this.adminUsersService.updateStatus(dto.userId, dto, admin.sub);
     } catch (error) {
       throw error;
     }

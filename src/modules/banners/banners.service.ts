@@ -13,6 +13,7 @@ import { ErrorCodes } from '../../shared/constants/error-codes';
 import { BannersRepository } from './banners.repository';
 import { MessageResponse } from '../../shared/interfaces';
 import { BannerListResponse } from './interfaces/banner-response.interface';
+import { buildPaginationMeta } from '../../shared/utils/pagination.util';
 
 @Injectable()
 export class BannersService {
@@ -49,7 +50,7 @@ export class BannersService {
   }
 
   /** Admin list all banners (paginated) */
-  async findAll(query: { page?: number; limit?: number; bannerModule?: string }): Promise<BannerListResponse> {
+  async findAll(query: { page?: number; limit?: number; bannerModule?: string; name?: string }): Promise<BannerListResponse> {
     try {
       const page = query.page ?? 1;
       const limit = Math.min(query.limit ?? 20, 50);
@@ -59,13 +60,11 @@ export class BannersService {
         where['bannerModule'] = query.bannerModule;
       }
 
-      const [banners, total] = await this.bannersRepository.findAll(where, page, limit);
-
-      const totalPages = Math.ceil(total / limit);
+      const [banners, total] = await this.bannersRepository.findAll(where, page, limit, query.name);
 
       return {
         data: banners,
-        meta: { total, page, limit, totalPages },
+        meta: buildPaginationMeta(total, page, limit),
       };
     } catch (error) {
       this.handleError(error, 'findAll');

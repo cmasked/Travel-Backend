@@ -3,33 +3,39 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { buildSwaggerConfig } from './swagger.config';
 import { SWAGGER_API_ROOT } from './swagger.constants';
 
+import { MANDATORY_HEADERS } from '../shared/constants/mandatory-headers.constant';
+
 export const setupSwagger = (app: INestApplication): void => {
   const config = buildSwaggerConfig();
   const document = SwaggerModule.createDocument(app, config);
 
-  // Ensure Swagger UI sends the global headers even if an endpoint overrides security (e.g., via @ApiBearerAuth)
-  for (const path in document.paths) {
-    for (const method in document.paths[path]) {
-      const operation = (document.paths[path] as any)[method];
-      if (operation.security && operation.security.length > 0) {
-        // If it has existing security (like Bearer), add the headers to it (AND logic)
-        operation.security.forEach((sec: any) => {
-          sec['x-client-ip'] = [];
-          sec['x-client-language'] = [];
-          sec['x-client-currency'] = [];
-          sec['x-client-device'] = [];
+  const customJsStr = `
+    const validationRules = ${JSON.stringify(MANDATORY_HEADERS.map(h => ({ name: h.name, msg: h.errorMessage })))};
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) {
+            const errorNodes = node.querySelectorAll ? Array.from(node.querySelectorAll('li')) : [];
+            if (node.tagName === 'LI') errorNodes.push(node);
+            errorNodes.forEach((li) => {
+              if (li.innerText.includes('Value must follow pattern') || li.innerText.includes('Value must be no longer than') || li.innerText.includes('Value must be no less than')) {
+                validationRules.forEach(rule => {
+                  if (li.innerText.includes("For '" + rule.name + "':")) {
+                    li.innerText = "For '" + rule.name + "': " + rule.msg;
+                  }
+                });
+              }
+            });
+          }
         });
-      } else {
-        // If it's a public endpoint, it still needs the global headers
-        operation.security = [{
-          'x-client-ip': [],
-          'x-client-language': [],
-          'x-client-currency': [],
-          'x-client-device': []
-        }];
-      }
-    }
-  }
+      });
+    });
+    window.addEventListener('load', () => {
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  `;
 
-  SwaggerModule.setup(SWAGGER_API_ROOT, app, document);
+  SwaggerModule.setup(SWAGGER_API_ROOT, app, document, {
+    customJsStr,
+  });
 };

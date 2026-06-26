@@ -18,6 +18,8 @@ import { UserStatus, UserType, AuthProvider, TravelerTitle } from '../../../shar
 import { RedisService } from '../../redis/redis.service';
 import { UsersRepository } from '../users.repository';
 import { UserListQuery, UserListResponse } from '../interfaces/user-response.interface';
+import { buildPaginationMeta } from '../../../shared/utils/pagination.util';
+import { IsOptional } from 'class-validator';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -25,10 +27,11 @@ const BCRYPT_ROUNDS = 12;
  * Valid status transitions per FRD §6.1 Account State Machine.
  */
 const VALID_TRANSITIONS: Record<string, UserStatus[]> = {
-  [UserStatus.PENDING_APPROVAL]: [UserStatus.ACTIVE, UserStatus.INACTIVE],
+  [UserStatus.PENDING]: [UserStatus.ACTIVE, UserStatus.INACTIVE, UserStatus.REJECTED],
   [UserStatus.ACTIVE]: [UserStatus.SUSPENDED, UserStatus.INACTIVE],
   [UserStatus.SUSPENDED]: [UserStatus.ACTIVE],
   [UserStatus.INACTIVE]: [UserStatus.ACTIVE],
+  [UserStatus.REJECTED]: [UserStatus.PENDING, UserStatus.ACTIVE],
 };
 
 @Injectable()
@@ -43,6 +46,7 @@ export class AdminUsersService {
   /** GET /admin/users — Admin list, paginated, filterable by date and role */
   async findAll(query: UserListQuery): Promise<UserListResponse> {
     try {
+
       const page = query.page ?? 1;
       const limit = Math.min(query.limit ?? 20, 50);
       const where: Record<string, unknown> = { isDeleted: false };
@@ -56,13 +60,12 @@ export class AdminUsersService {
         limit,
         query.fromDate,
         query.toDate,
+        query.name,
       );
-
-      const totalPages = Math.ceil(total / limit);
 
       return {
         data: users.map((u) => this.sanitizeUser(u)),
-        meta: { total, page, limit, totalPages },
+        meta: buildPaginationMeta(total, page, limit),
       };
     } catch (error) {
       this.handleError(error, 'findAll');
@@ -98,9 +101,9 @@ export class AdminUsersService {
 
       const oldStatus = user.status;
 
-      if (dto.status === UserStatus.SUSPENDED && !dto.rejectionReason) {
+      if ((dto.status === UserStatus.SUSPENDED || dto.status === UserStatus.REJECTED) && !dto.rejectionReason) {
         throw new UnprocessableEntityException({
-          message: 'rejection_reason is required when suspending an account',
+          message: 'rejectionReason is required when suspending or rejecting an account',
           code: ErrorCodes.VALIDATION_ERROR,
         });
       }
@@ -109,12 +112,12 @@ export class AdminUsersService {
       user.actionDate = new Date();
       user.updatedBy = adminId;
 
-      if (dto.status === UserStatus.SUSPENDED) {
+      if (dto.status === UserStatus.SUSPENDED || dto.status === UserStatus.REJECTED) {
         user.rejectionReason = dto.rejectionReason ?? null;
         await this.usersRepository.updateLoginSessionsExpired(userId);
       }
 
-      if (dto.status === UserStatus.ACTIVE && oldStatus === UserStatus.SUSPENDED) {
+      if (dto.status === UserStatus.ACTIVE && (oldStatus === UserStatus.SUSPENDED || oldStatus === UserStatus.REJECTED)) {
         user.rejectionReason = null;
       }
 

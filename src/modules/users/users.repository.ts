@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual, LessThanOrEqual, ILike } from 'typeorm';
 import { UserAccount } from './entities/user-account.entity';
 import { UserAccountAdditional } from './entities/user-account-additional.entity';
 import { LoginLog } from '../audit/entities/login-log.entity';
@@ -32,6 +32,7 @@ export class UsersRepository {
     limit: number,
     fromDate?: string,
     toDate?: string,
+    name?: string,
   ): Promise<[UserAccount[], number]> {
     // If the admin provided date filters, add them to the where clause
     if (fromDate && toDate) {
@@ -42,8 +43,16 @@ export class UsersRepository {
       where['createdAt'] = LessThanOrEqual(new Date(toDate + 'T23:59:59.999Z'));
     }
 
+    let finalWhere: any = where;
+    if (name) {
+      finalWhere = [
+        { ...where, firstName: ILike(`%${name}%`) },
+        { ...where, lastName: ILike(`%${name}%`) },
+      ];
+    }
+
     return this.userRepo.findAndCount({
-      where,
+      where: finalWhere,
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

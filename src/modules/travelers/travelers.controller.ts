@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { TravelersService } from './travelers.service';
 import { CreateTravelerDto } from './dto/create-traveler.dto';
 import { UpdateTravelerDto } from './dto/update-traveler.dto';
@@ -6,7 +7,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 import { Traveler } from './entities/traveler.entity';
 import { MessageResponse } from '../../shared/interfaces';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 /**
  * Traveler endpoints — FRD §5.3.
@@ -14,16 +15,18 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
  */
 @ApiTags('Travelers')
 @ApiBearerAuth()
+@ApiMandatoryHeaders()
 @Controller('users/me/travelers')
 export class TravelersController {
   constructor(private readonly travelersService: TravelersService) {}
 
   /** GET /users/me/travelers — List all saved travelers (FR-US-028) */
   @ApiOperation({ summary: 'List Travelers', description: 'Retrieve all saved travelers for the current user.' })
+  @ApiQuery({ name: 'name', required: false, type: String, description: 'Search by first or last name' })
   @Get()
-  async findAll(@CurrentUser() user: JwtPayload): Promise<Partial<Traveler>[]> {
+  async findAll(@CurrentUser() user: JwtPayload, @Query('name') name?: string): Promise<Partial<Traveler>[]> {
     try {
-      return await this.travelersService.findAll(user.sub);
+      return await this.travelersService.findAll(user.sub, name);
     } catch (error) {
       throw error;
     }

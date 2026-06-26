@@ -51,9 +51,9 @@ export class MarkupsService {
   }
 
   /** Get all markups */
-  async findAll(): Promise<Markup[]> {
+  async findAll(name?: string): Promise<Markup[]> {
     try {
-      return this.markupsRepository.findAll();
+      return this.markupsRepository.findAll(name);
     } catch (error) {
       this.handleError(error, 'findAll');
     }

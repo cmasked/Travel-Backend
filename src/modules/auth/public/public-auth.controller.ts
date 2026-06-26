@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { PublicAuthService } from './public-auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -19,6 +20,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
  * All routes prefixed /auth.
  */
 @ApiTags('Public Auth')
+@ApiMandatoryHeaders()
 @Controller('auth')
 export class PublicAuthController {
   constructor(private readonly publicAuthService: PublicAuthService) {}

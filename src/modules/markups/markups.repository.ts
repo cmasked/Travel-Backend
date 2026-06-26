@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Markup } from './entities/markup.entity';
 
 @Injectable()
@@ -10,8 +10,12 @@ export class MarkupsRepository {
     private readonly markupRepo: Repository<Markup>,
   ) {}
 
-  findAll(): Promise<Markup[]> {
-    return this.markupRepo.find({ order: { createdAt: 'DESC' } });
+  findAll(name?: string): Promise<Markup[]> {
+    const where: Record<string, unknown> = {};
+    if (name) {
+      where['markupName'] = ILike(`%${name}%`);
+    }
+    return this.markupRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
   findById(markupId: string): Promise<Markup | null> {

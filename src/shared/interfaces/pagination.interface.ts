@@ -3,6 +3,8 @@ export interface PaginationMeta {
   page: number;
   limit: number;
   totalPages: number;
+  nextPage: number | null;
+  prevPage: number | null;
 }
 
 export interface PaginatedResponse<T> {

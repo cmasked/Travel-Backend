@@ -277,7 +277,8 @@ export class PublicAuthService extends BaseAuthService {
         const codeMap: Record<string, string> = {
           [UserStatus.INACTIVE]: ErrorCodes.ACCOUNT_INACTIVE,
           [UserStatus.SUSPENDED]: ErrorCodes.ACCOUNT_SUSPENDED,
-          [UserStatus.PENDING_APPROVAL]: ErrorCodes.ACCOUNT_PENDING,
+          [UserStatus.PENDING]: ErrorCodes.ACCOUNT_PENDING,
+          [UserStatus.REJECTED]: ErrorCodes.ACCOUNT_REJECTED,
         };
         throw new ForbiddenException({
           message: `Account is ${user.status}`,

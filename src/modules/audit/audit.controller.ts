@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { ForceLogoutDto } from './dto/force-logout.dto';
@@ -12,6 +13,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
  */
 @ApiTags('Audit')
 @ApiBearerAuth()
+@ApiMandatoryHeaders()
 @Controller('users')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

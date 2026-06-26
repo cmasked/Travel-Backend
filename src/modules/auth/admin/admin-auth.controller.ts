@@ -1,3 +1,4 @@
+import { ApiMandatoryHeaders } from '../../../swagger/decorators/api-mandatory-headers.decorator';
 import { Body, Controller, Post } from '@nestjs/common';
 import { AdminAuthService } from './admin-auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -16,7 +17,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
  * blaise matuti
  */
 @ApiTags('Admin Auth')
-@Controller('auth/admin')
+@ApiMandatoryHeaders()
+@Controller('admin/auth')
 export class AdminAuthController {
   constructor(private readonly adminAuthService: AdminAuthService) { }
 
